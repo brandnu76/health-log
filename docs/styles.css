@@ -1,4 +1,4 @@
-/* Council of Health — Health Log dashboard */
+/* Brandon's Health Log dashboard */
 :root {
   --bg: #0f1419;
   --bg-elevated: #1a222c;
@@ -598,3 +598,14 @@ main {
   white-space: nowrap;
   border: 0;
 }
+
+
+/* Legal / copyright */
+.legal-card p { margin: 0 0 0.75rem; color: var(--text-muted); line-height: 1.55; font-size: 0.95rem; }
+.legal-card p:last-child { margin-bottom: 0; }
+.legal-card strong { color: var(--text); }
+.footer-grid { display: grid; gap: 0.5rem; }
+.footer-copy { color: var(--text); font-weight: 600; margin: 0; }
+.footer-meta { margin: 0; color: var(--text-subtle); font-size: 0.85rem; }
+
+.site-footer { text-align: left; }
