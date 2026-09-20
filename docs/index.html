@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Council of Health — personal body composition health log dashboard." />
+  <meta name="color-scheme" content="dark light" />
+  <title>Council of Health · Health Log</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <div class="brand">
+        <h1>Council of Health</h1>
+        <span class="subtitle">Health Log</span>
+      </div>
+      <div class="header-actions">
+        <span class="chip disclaimer" title="Not medical advice">Personal tracking · not medical advice</span>
+        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle light and dark theme" title="Toggle theme">
+          <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 0 0 11.5 11.5z"/>
+          </svg>
+          <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+    <div id="errorRoot" hidden class="error-banner" role="alert"></div>
+
+    <section class="section" aria-labelledby="metrics-heading">
+      <div class="section-head">
+        <h2 id="metrics-heading">Latest metrics</h2>
+        <span class="meta" id="latestMeta">—</span>
+      </div>
+      <div class="metric-grid" id="metricCards" role="list"></div>
+      <div class="extra-grid" id="extraMetrics" aria-label="Additional Sep 19 metrics"></div>
+    </section>
+
+    <section class="section" aria-labelledby="charts-heading">
+      <div class="section-head">
+        <h2 id="charts-heading">Trends</h2>
+        <span class="meta">Dated scans · nulls skipped</span>
+      </div>
+      <div class="chart-grid">
+        <div class="card card-pad chart-card">
+          <h3 id="chart-weight-label">Weight (lb)</h3>
+          <div class="chart-wrap">
+            <canvas id="chartWeight" role="img" aria-labelledby="chart-weight-label"></canvas>
+          </div>
+        </div>
+        <div class="card card-pad chart-card">
+          <h3 id="chart-bf-label">Body fat %</h3>
+          <div class="chart-wrap">
+            <canvas id="chartBf" role="img" aria-labelledby="chart-bf-label"></canvas>
+          </div>
+        </div>
+        <div class="card card-pad chart-card">
+          <h3 id="chart-fat-label">Fat mass (lb)</h3>
+          <div class="chart-wrap">
+            <canvas id="chartFat" role="img" aria-labelledby="chart-fat-label"></canvas>
+          </div>
+        </div>
+        <div class="card card-pad chart-card">
+          <h3 id="chart-visc-label">Visceral fat rating</h3>
+          <div class="chart-wrap">
+            <canvas id="chartVisceral" role="img" aria-labelledby="chart-visc-label"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="timeline-heading">
+      <div class="section-head">
+        <h2 id="timeline-heading">Progress timeline</h2>
+      </div>
+      <div class="card card-pad">
+        <ol class="timeline" id="timeline"></ol>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="goals-heading">
+      <div class="section-head">
+        <h2 id="goals-heading">Goals &amp; reference</h2>
+      </div>
+      <div class="panel-grid">
+        <div class="card card-pad" id="goalsPanel">
+          <h3>Goals</h3>
+          <ul class="goal-list" id="goalList"></ul>
+          <div class="note" id="goalsNote"></div>
+        </div>
+        <div class="card card-pad" id="visceralPanel">
+          <h3>Visceral fat reference</h3>
+          <ul class="ref-scale" id="visceralRef"></ul>
+          <p class="ref-note" id="visceralNote"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p id="footerDisclaimer">
+        Personal wellness tracking only — not medical advice. Body composition estimates vary by device and conditions.
+      </p>
+      <p>Male · 50 · Fitdays+ · Data-driven from <code>data.json</code></p>
+    </div>
+  </footer>
+</body>
+</html>

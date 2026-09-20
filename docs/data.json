@@ -1,0 +1,116 @@
+{
+  "meta": {
+    "title": "Council of Health",
+    "subtitle": "Health Log",
+    "subject": {
+      "sex": "male",
+      "age": 50,
+      "device": "Fitdays+"
+    },
+    "disclaimer": "Personal wellness tracking only — not medical advice. Body composition estimates vary by device and conditions.",
+    "visceralReference": {
+      "healthy": "1–12",
+      "excess": "13+",
+      "higherRisk": "15+",
+      "note": "Tanita-style visceral fat rating scale"
+    }
+  },
+  "goals": {
+    "items": [
+      "+20 lb lean mass",
+      "15–20% body fat",
+      "Metabolic health",
+      "Longevity"
+    ],
+    "notes": [
+      "Device ideal weight of 140.2 lb is discarded — not a useful target for this build or goals."
+    ]
+  },
+  "scans": [
+    {
+      "id": "2026-02-01",
+      "date": "2026-02-01",
+      "label": "Baseline",
+      "weight": 216,
+      "bf": 35.5,
+      "fatMass": 76.7,
+      "fatMassCalc": true,
+      "visceral": 17.8,
+      "bodyAge": 54,
+      "lbm": null,
+      "muscleMass": 131,
+      "muscleMassApprox": true,
+      "labelUncertain": true,
+      "muscleRate": null,
+      "skeletalMusclePct": null,
+      "subqFat": null,
+      "bodyWater": null,
+      "waterWeight": null,
+      "proteinPct": null,
+      "proteinMass": null,
+      "bone": null,
+      "bmr": null,
+      "bmi": null,
+      "idealWeightIgnore": null,
+      "fatLossNote": null,
+      "partial": false
+    },
+    {
+      "id": "2026-08-24",
+      "date": "2026-08-24",
+      "label": "Partial",
+      "weight": null,
+      "bf": null,
+      "fatMass": null,
+      "fatMassCalc": false,
+      "visceral": null,
+      "bodyAge": null,
+      "lbm": null,
+      "muscleMass": null,
+      "muscleMassApprox": false,
+      "labelUncertain": false,
+      "muscleRate": null,
+      "skeletalMusclePct": null,
+      "subqFat": null,
+      "bodyWater": null,
+      "waterWeight": null,
+      "proteinPct": null,
+      "proteinMass": null,
+      "bone": null,
+      "bmr": null,
+      "bmi": null,
+      "idealWeightIgnore": null,
+      "fatLossNote": 10.4,
+      "fatLossNoteVs": "2026-02-01",
+      "partial": true
+    },
+    {
+      "id": "2026-09-19",
+      "date": "2026-09-19",
+      "label": "Full scan",
+      "weight": 201.6,
+      "bf": 33.5,
+      "fatMass": 67.7,
+      "fatMassCalc": false,
+      "visceral": 16.4,
+      "bodyAge": 53,
+      "lbm": 133.9,
+      "muscleMass": 125.9,
+      "muscleMassApprox": false,
+      "labelUncertain": false,
+      "muscleRate": 62.4,
+      "skeletalMusclePct": 45.7,
+      "subqFat": 21.9,
+      "bodyWater": 47.1,
+      "waterWeight": 95.0,
+      "proteinPct": 16.0,
+      "proteinMass": 32.2,
+      "bone": 7.1,
+      "bmr": 1743,
+      "bmi": 31.7,
+      "idealWeightIgnore": 140.2,
+      "fatLossNote": null,
+      "partial": false
+    }
+  ]
+}
