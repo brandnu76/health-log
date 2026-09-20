@@ -1,15 +1,18 @@
 {
   "meta": {
-    "title": "Council of Health",
-    "subtitle": "Health Log",
+    "title": "Brandon's Health Log",
+    "subtitle": "Council of Health \u00b7 private tracking",
+    "owner": "Brandon Carroll",
+    "copyright": "\u00a9 2026 Brandon Carroll. All rights reserved.",
+    "rights": "Proprietary. No license to copy, scrape, republish, redistribute, or create derivative works without prior written permission.",
     "subject": {
       "sex": "male",
       "age": 50,
       "device": "Fitdays+"
     },
-    "disclaimer": "Personal wellness tracking only — not medical advice. Body composition estimates vary by device and conditions.",
+    "disclaimer": "Personal wellness tracking only \u2014 not medical advice. Body composition estimates vary by device and conditions.",
     "visceralReference": {
-      "healthy": "1–12",
+      "healthy": "1\u201312",
       "excess": "13+",
       "higherRisk": "15+",
       "note": "Tanita-style visceral fat rating scale"
@@ -18,12 +21,12 @@
   "goals": {
     "items": [
       "+20 lb lean mass",
-      "15–20% body fat",
+      "15\u201320% body fat",
       "Metabolic health",
       "Longevity"
     ],
     "notes": [
-      "Device ideal weight of 140.2 lb is discarded — not a useful target for this build or goals."
+      "Device ideal weight of 140.2 lb is discarded \u2014 not a useful target for this build or goals."
     ]
   },
   "scans": [

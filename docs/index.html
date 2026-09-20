@@ -3,9 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Council of Health — personal body composition health log dashboard." />
+  <meta name="description" content="Brandon's Health Log — private body-composition progress dashboard. All rights reserved." />
+  <meta name="author" content="Brandon Carroll" />
+  <meta name="copyright" content="© 2026 Brandon Carroll. All rights reserved." />
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
   <meta name="color-scheme" content="dark light" />
-  <title>Council of Health · Health Log</title>
+  <title>Brandon's Health Log</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap" rel="stylesheet" />
@@ -19,8 +22,8 @@
   <header class="site-header">
     <div class="wrap header-inner">
       <div class="brand">
-        <h1>Council of Health</h1>
-        <span class="subtitle">Health Log</span>
+        <h1 id="siteTitle">Brandon's Health Log</h1>
+        <span class="subtitle" id="siteSubtitle">Council of Health · private tracking</span>
       </div>
       <div class="header-actions">
         <span class="chip disclaimer" title="Not medical advice">Personal tracking · not medical advice</span>
@@ -46,7 +49,7 @@
         <span class="meta" id="latestMeta">—</span>
       </div>
       <div class="metric-grid" id="metricCards" role="list"></div>
-      <div class="extra-grid" id="extraMetrics" aria-label="Additional Sep 19 metrics"></div>
+      <div class="extra-grid" id="extraMetrics" aria-label="Additional latest-scan metrics"></div>
     </section>
 
     <section class="section" aria-labelledby="charts-heading">
@@ -108,14 +111,26 @@
         </div>
       </div>
     </section>
+
+    <section class="section" aria-labelledby="legal-heading">
+      <div class="section-head">
+        <h2 id="legal-heading">Copyright &amp; use</h2>
+      </div>
+      <div class="card card-pad legal-card">
+        <p id="copyrightLine"><strong>© 2026 Brandon Carroll. All rights reserved.</strong></p>
+        <p id="rightsLine">Brandon's Health Log — including design, text, charts, metrics, and underlying data — is proprietary personal property. No license is granted to copy, scrape, republish, redistribute, or create derivative works without prior written permission from Brandon Carroll.</p>
+        <p id="disclaimerLegal">This site is a private wellness trend tool, not medical advice, not a diagnosis, and not a substitute for labs or a clinician.</p>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
-    <div class="wrap">
+    <div class="wrap footer-grid">
       <p id="footerDisclaimer">
         Personal wellness tracking only — not medical advice. Body composition estimates vary by device and conditions.
       </p>
-      <p>Male · 50 · Fitdays+ · Data-driven from <code>data.json</code></p>
+      <p class="footer-copy" id="footerCopyright">© 2026 Brandon Carroll. All rights reserved.</p>
+      <p class="footer-meta">Male · 50 · Fitdays+ · Data from <code>data.json</code></p>
     </div>
   </footer>
 </body>
