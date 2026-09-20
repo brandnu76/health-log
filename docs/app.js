@@ -1,5 +1,5 @@
 /**
- * Council of Health — Health Log dashboard
+ * Brandon's Health Log dashboard
  * Powered by data.json; Chart.js for trends.
  */
 (function () {
@@ -468,6 +468,26 @@
     if (data.meta.disclaimer) {
       document.getElementById("footerDisclaimer").textContent =
         data.meta.disclaimer;
+    }
+
+    const titleEl = document.getElementById("siteTitle");
+    const subEl = document.getElementById("siteSubtitle");
+    if (titleEl && data.meta.title) titleEl.textContent = data.meta.title;
+    if (subEl && data.meta.subtitle) subEl.textContent = data.meta.subtitle;
+    if (data.meta.title) document.title = data.meta.title;
+
+    const copy = data.meta.copyright || "© 2026 Brandon Carroll. All rights reserved.";
+    const rights = data.meta.rights || "";
+    const footerCopy = document.getElementById("footerCopyright");
+    if (footerCopy) footerCopy.textContent = copy;
+    const copyLine = document.getElementById("copyrightLine");
+    if (copyLine) copyLine.innerHTML = "<strong>" + copy + "</strong>";
+    const rightsLine = document.getElementById("rightsLine");
+    if (rightsLine && rights) {
+      rightsLine.textContent =
+        (data.meta.title || "This site") +
+        " — including design, text, charts, metrics, and underlying data — is proprietary personal property. " +
+        rights;
     }
   }
 
