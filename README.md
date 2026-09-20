@@ -1,54 +1,27 @@
-# Health log
+# Brandon's Health Log
 
 Private progress log for Fitdays+ body-composition trends, lift notes, and Council of Health analyses.
+
+**© 2026 Brandon Carroll. All rights reserved.** See [`LICENSE`](LICENSE). No permission is granted to copy, scrape, republish, or redistribute this work without prior written permission.
 
 **Not a medical record. Not a diagnosis.** Fitdays+ is a consumer BIA trend tool, not DEXA.
 
 ## Dashboard
 
-A static dashboard lives in [`docs/`](docs/). Open it locally or enable GitHub Pages (Settings → Pages → Deploy from a branch → folder `/docs`).
+Live site (GitHub Pages): https://brandnu76.github.io/health-log/
 
-# Health Log — GitHub Pages / local preview
+Static UI in [`docs/`](docs/), driven by `docs/data.json`.
 
-Static dashboard for the `brandnu76/health-log` repo. UI reads **`docs/data.json`** so new scans are add-only.
-
-## GitHub Pages
-
-1. Repo **Settings → Pages**.
-2. Source: **Deploy from a branch**.
-3. Branch: `main` (or default), folder: **`/docs`**.
-4. Save. Site URL will be like `https://brandnu76.github.io/health-log/`.
-
-Ensure these files stay under `docs/`:
-
-- `index.html`, `styles.css`, `app.js`, `data.json`
-
-Optional: set Pages custom domain later; paths are relative so the site works at a repo root or `/docs` publish root.
-
-## Local preview
-
-Browsers block `fetch("data.json")` on `file://`. Serve the folder over HTTP:
+### Local preview
 
 ```bash
-# from repo root
 cd docs && python3 -m http.server 8080
 # open http://localhost:8080/
 ```
 
-Or:
+### GitHub Pages
 
-```bash
-npx --yes serve docs
-```
-
-## Adding a scan
-
-Append an object to `scans` in `data.json` (same field names as Sep 19). Charts skip `null`s; metric cards use the latest non-partial scan with weight. Keep February baseline for deltas.
-
-## Merge note
-
-Fold this section into the main repo README when ready. Do not commit secrets; this site is public if Pages is enabled on a private repo only for entitled viewers (org/plan dependent)—confirm visibility before enabling Pages.
-
+Settings → Pages → Deploy from a branch → `main` / `/docs`.
 
 ## How to read this
 
@@ -59,6 +32,7 @@ Fold this section into the main repo README when ready. Do not commit secrets; t
 - `PROTOCOL.md` — current 8–12 week consensus protocol
 - `lifts/` — optional load × reps × tempo logs
 - `docs/` — visual dashboard (`data.json` drives the UI)
+- `LICENSE` — all rights reserved
 
 ## Rules
 
