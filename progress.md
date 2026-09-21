@@ -1,5 +1,16 @@
 # Progress
 
+Newest entry at the top.
+
+## 2026-03 series import (2026-09-20)
+
+- March sits **above** the Feb 216 lb profile note: Mar 7 peak 221.4 lb / 36.1% BF / visceral 18.2
+- March flat-high: Mar 7 221.4 → Mar 14 219.4 → Mar 21 219.8 → Mar 28 221.0 (no lasting cut yet)
+- From March peak (Mar 7) → Sep 19: weight −19.8 lb, BF −2.6 pp, fat mass ~79.9→67.7 (−~12.2), visceral 18.2→16.4 (−1.8)
+- Muscle mass same field: 132.5 (Mar 7) → 125.9 (Sep 19) (−6.6 lb) — lean protection remains the main warning
+- Scans: `scans/2026-03-07.md` … `2026-03-28.md`
+- Council: `council/2026-03-series.md`
+
 Newest entry at the top. Fat mass calculated from weight × BF% when the scale did not list fat mass.
 
 ## 2026-09-19 (series update)
