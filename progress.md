@@ -1,26 +1,51 @@
 # Progress
 
-Newest entry at the top. Fat mass for Feb is calculated from weight × BF% when the scale did not list fat mass.
+Newest entry at the top. Fat mass calculated from weight × BF% when the scale did not list fat mass.
 
-## 2026-09-19
+## 2026-09-19 (series update)
 
-- Verdict: real fat/visceral loss since Feb; cut still needs lean protection
-- Weight: 216 → 201.6 (−14.4 lb)
-- BF%: 35.5 → 33.5 (−2.0 pp)
-- Fat mass: ~76.7 → 67.7 (−~9.0 lb)
-- Visceral: 17.8 → 16.4 (−1.4)
-- Body age: 54 → 53 (−1)
-- LBM / muscle mass: not comparable to Feb (label mismatch)
-- Council: `council/2026-09-19.md`
-- Scan: `scans/2026-09-19.md`
+- Verdict: fat and visceral still trending down Aug→Sep; same-field muscle mass/LBM drifted down — protect the lean goal
+- Weight: 216 (Feb) → 209.4 (Aug 8) → 201.6 (Sep 19); Aug 22→29 small rebound (+1.0 lb)
+- BF%: 35.5 → 34.6 → 33.5
+- Fat mass: ~76.7 → ~72.5 (Aug 8) → 67.7 (Sep 19)
+- Visceral: 17.8 → 17.1 → 16.4
+- Muscle mass (same field): 128.3 (Aug 8) → 125.9 (Sep 19) (−2.4 lb)
+- LBM / fat-free: 136.9 (Aug 8) → 133.9 (Sep 19) (−3.0 lb)
+- Scans added: Aug 8, 15, 22, 29; Sep 13 (Sep 19 already present)
+- Council: `council/2026-09-20-series.md`
+
+## 2026-09-13
+
+- Weight 204.0, BF 33.9%, fat 69.2, visceral 16.6, LBM 134.8, muscle mass 126.3 (10:24 weigh-in)
+- Scan: `scans/2026-09-13.md`
+
+## 2026-08-29
+
+- Weight 206.6, BF 34.2%, fat ~70.7 (calc), visceral 16.8 — rebound vs Aug 22
+- Scan: `scans/2026-08-29.md`
+
+## 2026-08-22
+
+- Weight 205.6, BF 34.1%, fat ~70.1 (calc), visceral 16.7
+- Scan: `scans/2026-08-22.md`
+
+## 2026-08-15
+
+- Weight 207.4, BF 34.3%, fat ~71.1 (calc), visceral 16.9
+- Scan: `scans/2026-08-15.md`
+
+## 2026-08-08
+
+- Weight 209.4, BF 34.6%, fat ~72.5 (calc), visceral 17.1; muscle mass 128.3
+- Scan: `scans/2026-08-08.md`
 
 ## 2026-08-24
 
-- Note only: ~10.4 lb fat loss vs Feb baseline (no full Fitdays+ dump archived here)
+- Legacy note only: ~10.4 lb fat loss vs Feb (stub retained)
 - Scan stub: `scans/2026-08-24.md`
 
 ## 2026-02 (baseline)
 
 - Weight 216 lb, BF% 35.5, visceral 17.8, body age 54
-- ~131 lb “muscle” — **label uncertain**; do not delta against later muscle mass / LBM fields
+- ~131 lb “muscle” — **label uncertain**
 - Scan: `scans/2026-02.md`
