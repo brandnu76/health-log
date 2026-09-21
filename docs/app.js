@@ -1,7 +1,7 @@
 (async function () {
   const script = document.currentScript;
   const base = (script && script.src ? script.src : new URL("app.js", window.location.href).href).replace(/[^/]+$/, "");
-  const parts = ["app-a.js","app-b.js","app-c.js","app-d.js","app-e.js","app-f.js","app-g.js","app-h.js"];
+  const parts = ["app-a.js","app-b.js","app-c.js","app-d.js","app-e.js","app-f.js","app-g.js","app-h.js","app-i.js","app-j.js","app-k.js"];
   let code = "";
   for (const p of parts) {
     const res = await fetch(base + p, { cache: "no-cache" });
