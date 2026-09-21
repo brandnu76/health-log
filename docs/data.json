@@ -27,7 +27,16 @@
     ],
     "notes": [
       "Device ideal weight of 140.2 lb is discarded \u2014 not a useful target for this build or goals."
-    ]
+    ],
+    "targets": {
+      "bfBandMin": 15,
+      "bfBandMax": 20,
+      "bfUpperTarget": 20,
+      "bfStretch": 15,
+      "visceralHealthyMax": 12,
+      "visceralExcess": 13,
+      "visceralHigherRisk": 15
+    }
   },
   "scans": [
     {
