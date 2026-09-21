@@ -109,3 +109,40 @@
 .progress-item h4 { margin: 0 0 0.35rem; font-size: 0.85rem; font-weight: 600; }
 .pace-row { display: flex; flex-direction: column; gap: 0.2rem; }
 .pace-row strong { color: var(--text); font-weight: 600; }
+
+.trends-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem 1rem;
+  margin-left: auto;
+}
+.range-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+.range-btn {
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.35rem 0.7rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.range-btn + .range-btn { border-left: 1px solid var(--border); }
+.range-btn[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.range-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  z-index: 1;
+}
