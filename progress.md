@@ -2,6 +2,15 @@
 
 Newest entry at the top.
 
+## 2026-04 / 2026-05 series import
+
+- Apr–May: noisy high plateau 215–220 lb; May 9 dip (215.4) then rebound
+- Visceral stuck ~17.7–18.1; muscle mass held ~130–132
+- Scans: Apr 18, 25; May 2, 9, 16, 23
+- Council: `council/2026-04-05-series.md`
+
+Newest entry at the top.
+
 ## 2026-03 series import (2026-09-20)
 
 - March sits **above** the Feb 216 lb profile note: Mar 7 peak 221.4 lb / 36.1% BF / visceral 18.2
