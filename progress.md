@@ -2,14 +2,21 @@
 
 Newest entry at the top.
 
+## 2026-06 / 2026-07 series import
+
+- Steady downtrend starts: Jun 6 214.6 → Jul 18 212.0; visceral 17.6→17.4; muscle 130.3→129.4
+- Bridge between May plateau and August acceleration
+- Scans: Jun 6, 20; Jul 11, 18
+- Council: `council/2026-06-07-series.md`
+
+Newest entry at the top.
+
 ## 2026-04 / 2026-05 series import
 
 - Apr–May: noisy high plateau 215–220 lb; May 9 dip (215.4) then rebound
 - Visceral stuck ~17.7–18.1; muscle mass held ~130–132
 - Scans: Apr 18, 25; May 2, 9, 16, 23
 - Council: `council/2026-04-05-series.md`
-
-Newest entry at the top.
 
 ## 2026-03 series import (2026-09-20)
 
