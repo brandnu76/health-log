@@ -2,6 +2,14 @@
 
 Newest entry at the top.
 
+## 2026-09-26
+
+- Weight 202.4, BF 33.6%, fat 67.9, visceral 16.4, LBM 134.5, muscle mass 126.1 (09:37 weigh-in)
+- vs Sep 19: weight +0.8, BF +0.1 pp, fat +0.2, LBM +0.6, muscle mass +0.2, visceral 0, BMR +3. Flat week, within BIA noise; first lean hold/rise after the Aug→Sep slide
+- vs Sep 13 (2 weeks): weight −1.6, fat −1.3
+- Scan: `scans/2026-09-26.md`
+- Council: `council/2026-09-26.md`
+
 ## 2026-06 / 2026-07 series import
 
 - Steady downtrend starts: Jun 6 214.6 → Jul 18 212.0; visceral 17.6→17.4; muscle 130.3→129.4
