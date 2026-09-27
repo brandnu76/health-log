@@ -33,11 +33,14 @@
 .btn-primary { font: inherit; font-weight: 650; padding: 0.65rem 1rem; border: 0; border-radius: var(--radius-sm); background: var(--accent); color: #042f2e; cursor: pointer; }
 .file-label { cursor: pointer; display: inline-flex; align-items: center; }
 .header-actions a.chip { text-decoration: none; color: var(--text-muted); }
-#ghChip.gh-on { border-color: var(--accent); color: var(--accent); }
-.hint-list { margin: 0.4rem 0 0.8rem; padding-left: 1.2rem; color: var(--text-muted); font-size: 0.85rem; }
-.hint-list a { color: var(--accent); }
-.hint code { font-size: 0.8em; }
+.food-search { margin: 0.75rem 0 0.25rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); }
+.food-search-row { display: grid; grid-template-columns: 1fr 5.5rem auto; gap: 0.5rem; align-items: end; margin-top: 0.5rem; }
+.food-results { display: grid; gap: 0.35rem; margin-top: 0.6rem; }
+.food-hit { text-align: left; font: inherit; font-size: 0.85rem; padding: 0.5rem 0.65rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text); cursor: pointer; }
+.food-hit:hover { border-color: var(--accent); }
 @media (max-width: 520px) {
   .lift-table th:nth-child(3), .lift-table td:nth-child(3) { width: 3.2rem; }
   .chip.disclaimer { display: none; }
+  .food-search-row { grid-template-columns: 1fr 5rem; }
+  .food-search-row .btn-export { grid-column: 1 / -1; }
 }
