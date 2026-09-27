@@ -1,9 +1,7 @@
 (function () {
   const STORE = "healthLogDailyV1";
-  const TOKEN_KEY = "healthLogGhToken";
   const BLOCK_START = "2026-09-28";
   const BLOCK_WEEKS = 12;
-  const GH = { owner: "brandnu76", repo: "health-log", path: "logs/daily.json", branch: "main" };
   const CHECKS = [["cpap", "CPAP last night"],["proteinHit", "Protein 160 g+"],["noStarch", "No rice / bread / pasta / dessert"],["veg", "Veg at 2+ meals"],["water", "Water through the day"],["creatine", "Creatine 5 g"]];
   const MEALS = [["breakfast", "Breakfast"],["lunch", "Lunch"],["dinner", "Dinner"],["snack", "Anchor snack"]];
   const WORK = [["off", "Off"],["walk", "Walk"],["A", "Lift A"],["B", "Lift B"],["C", "Lift C"]];
@@ -30,57 +28,7 @@
   const $ = (id) => document.getElementById(id);
   let current = todayISO();
   let days = loadAll();
-  let remoteSha = null;
-  let pushing = false;
-  function getToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
   function setStatus(msg) { $("saveStatus").textContent = msg; }
-  function setChip(on, label) { const el = $("ghChip"); el.textContent = label; el.classList.toggle("gh-on", on); }
-  function b64utf8(str) { const bytes = new TextEncoder().encode(str); let bin = ""; bytes.forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin); }
-  function utf8b64(b64) { const clean = String(b64 || "").replace(/\n/g, ""); const bin = atob(clean); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); return new TextDecoder().decode(bytes); }
-  function ghHeaders() { return { Accept: "application/vnd.github+json", Authorization: "Bearer " + getToken(), "X-GitHub-Api-Version": "2022-11-28" }; }
-  async function pullGitHub() {
-    if (!getToken()) { setChip(false, "GitHub off"); setStatus("No token. Store one below, then Pull."); return false; }
-    setStatus("Pulling from GitHub…");
-    const url = "https://api.github.com/repos/" + GH.owner + "/" + GH.repo + "/contents/" + GH.path + "?ref=" + GH.branch;
-    const res = await fetch(url, { headers: ghHeaders() });
-    if (res.status === 401 || res.status === 403) { setChip(false, "GitHub auth"); setStatus("Token rejected. Create a new fine-grained token with Contents read/write."); return false; }
-    if (res.status === 404) { remoteSha = null; setChip(true, "GitHub ready"); setStatus("No logs/daily.json yet. First Save to GitHub will create it."); return true; }
-    if (!res.ok) { setChip(false, "GitHub error"); setStatus("GitHub GET failed (" + res.status + ")."); return false; }
-    const data = await res.json();
-    remoteSha = data.sha;
-    const parsed = JSON.parse(utf8b64(data.content));
-    const incoming = parsed.days || parsed;
-    days = Object.assign({}, days, incoming);
-    saveAll(days);
-    setChip(true, "GitHub on");
-    setStatus("Loaded " + Object.keys(incoming).length + " day(s) from logs/daily.json.");
-    return true;
-  }
-  async function pushGitHub(message) {
-    if (!getToken()) { setStatus("Saved on this phone only. Store a token to write GitHub."); return false; }
-    if (pushing) return false;
-    pushing = true;
-    setStatus("Writing logs/daily.json…");
-    try {
-      const payload = { blockStart: BLOCK_START, updated: new Date().toISOString(), days };
-      const body = { message: message || "Update daily log", content: b64utf8(JSON.stringify(payload, null, 2)), branch: GH.branch };
-      if (remoteSha) body.sha = remoteSha;
-      const url = "https://api.github.com/repos/" + GH.owner + "/" + GH.repo + "/contents/" + GH.path;
-      let res = await fetch(url, { method: "PUT", headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()), body: JSON.stringify(body) });
-      if (res.status === 409 || res.status === 422) {
-        await pullGitHub();
-        body.sha = remoteSha;
-        body.content = b64utf8(JSON.stringify({ blockStart: BLOCK_START, updated: new Date().toISOString(), days }, null, 2));
-        res = await fetch(url, { method: "PUT", headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()), body: JSON.stringify(body) });
-      }
-      if (!res.ok) { const err = await res.text(); setChip(false, "GitHub error"); setStatus("GitHub save failed (" + res.status + "). " + err.slice(0, 120)); return false; }
-      const data = await res.json();
-      remoteSha = data.content && data.content.sha;
-      setChip(true, "GitHub on");
-      setStatus("Saved " + current + " to GitHub.");
-      return true;
-    } finally { pushing = false; }
-  }
   function getDay() { if (!days[current]) days[current] = emptyDay(current); return days[current]; }
   function renderChecks(day) {
     $("checkGrid").innerHTML = CHECKS.map(([id, label]) => `<label class="check-item"><input type="checkbox" data-check="${id}" ${day.checks[id] ? "checked" : ""} /><span>${label}</span></label>`).join("");
@@ -160,14 +108,11 @@
     $("liftBlock").addEventListener("change", persistLocal);
     $("mealGrid").addEventListener("input", (e) => { const t = e.target; const id = t.getAttribute("data-meal"); const f = t.getAttribute("data-f"); if (!id) return; if (f === "starch") getDay().meals[id].starch = t.checked; else getDay().meals[id][f] = t.value; updateProtein(getDay()); });
     $("mealGrid").addEventListener("change", persistLocal);
-    $("saveBtn").addEventListener("click", async () => { readFormIntoDay(); persistLocal(); await pushGitHub("Log " + current); });
-    $("pullBtn").addEventListener("click", async () => { await pullGitHub(); render(); });
-    $("storeTokenBtn").addEventListener("click", async () => { const t = $("ghToken").value.trim(); if (!t) { setStatus("Paste a token first."); return; } localStorage.setItem(TOKEN_KEY, t); $("ghToken").value = ""; setChip(true, "GitHub ready"); await pullGitHub(); render(); });
-    $("clearTokenBtn").addEventListener("click", () => { localStorage.removeItem(TOKEN_KEY); remoteSha = null; setChip(false, "GitHub off"); setStatus("Token cleared from this phone."); });
-    $("exportBtn").addEventListener("click", () => { readFormIntoDay(); persistLocal(); const blob = new Blob([JSON.stringify({ blockStart: BLOCK_START, days }, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "health-log-daily.json"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); });
-    $("mdBtn").addEventListener("click", async () => { readFormIntoDay(); persistLocal(); try { await navigator.clipboard.writeText(toMarkdown(getDay())); setStatus("Markdown copied."); } catch { setStatus("Copy failed."); } });
+    $("saveBtn").addEventListener("click", () => { readFormIntoDay(); persistLocal(); setStatus("Saved on this phone."); });
+    $("exportBtn").addEventListener("click", () => { readFormIntoDay(); persistLocal(); const blob = new Blob([JSON.stringify({ blockStart: BLOCK_START, days }, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "health-log-daily.json"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); setStatus("JSON exported."); });
+    $("mdBtn").addEventListener("click", async () => { readFormIntoDay(); persistLocal(); try { await navigator.clipboard.writeText(toMarkdown(getDay())); setStatus("Markdown copied. Paste it here to put the day on GitHub."); } catch { setStatus("Copy failed."); } });
   }
+  try { localStorage.removeItem("healthLogGhToken"); } catch {}
   wire();
   render();
-  if (getToken()) { setChip(true, "GitHub ready"); pullGitHub().then(() => render()); } else { setChip(false, "GitHub off"); }
 })();
