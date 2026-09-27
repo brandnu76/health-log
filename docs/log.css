@@ -1,0 +1,39 @@
+.log-main { padding: 1.25rem 0 3rem; display: grid; gap: 1rem; }
+.log-main h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+.log-main h3 { margin: 1rem 0 0.5rem; font-size: 0.95rem; }
+.log-datebar { display: grid; gap: 0.65rem; }
+.log-date-label { display: grid; gap: 0.3rem; font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+.log-date-label input { font: inherit; font-size: 1.05rem; padding: 0.55rem 0.7rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text); }
+.log-planned { margin: 0; color: var(--accent); font-weight: 600; }
+.week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.35rem; }
+.week-cell { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 0.4rem 0.15rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text-muted); font-size: 0.7rem; cursor: pointer; }
+.week-cell strong { font-size: 0.85rem; color: var(--text); }
+.week-cell.today { border-color: var(--accent); }
+.week-cell.logged { background: var(--accent-soft); }
+.week-cell.active { outline: 2px solid var(--accent); }
+.check-grid { display: grid; gap: 0.45rem; }
+.check-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.55rem 0.7rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-elevated); }
+.check-item input { width: 1.15rem; height: 1.15rem; accent-color: var(--accent); }
+.work-type { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.85rem; }
+.work-type button { font: inherit; font-size: 0.85rem; padding: 0.4rem 0.7rem; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text); cursor: pointer; }
+.work-type button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 600; }
+.field { display: grid; gap: 0.3rem; margin-top: 0.7rem; font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+.field input, .field textarea, .field select { font: inherit; font-size: 1rem; font-weight: 400; color: var(--text); padding: 0.55rem 0.7rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-elevated); }
+.lift-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.lift-table th, .lift-table td { padding: 0.4rem 0.3rem; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+.lift-table input { width: 100%; min-width: 0; font: inherit; font-size: 0.85rem; padding: 0.35rem 0.4rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.meal-card { margin-top: 0.75rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-elevated); }
+.meal-card h3 { margin: 0 0 0.45rem; }
+.meal-row { display: grid; grid-template-columns: 1fr 5.5rem; gap: 0.5rem; }
+.hint { margin: 0 0 0.6rem; color: var(--text-muted); font-size: 0.85rem; }
+.protein-total { margin-top: 0.75rem; font-weight: 650; }
+.protein-total.short { color: var(--caution); }
+.protein-total.hit { color: var(--accent); }
+.log-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.btn-primary { font: inherit; font-weight: 650; padding: 0.65rem 1rem; border: 0; border-radius: var(--radius-sm); background: var(--accent); color: #042f2e; cursor: pointer; }
+.file-label { cursor: pointer; display: inline-flex; align-items: center; }
+.header-actions a.chip { text-decoration: none; color: var(--text-muted); }
+@media (max-width: 520px) {
+  .lift-table th:nth-child(3), .lift-table td:nth-child(3) { width: 3.2rem; }
+  .chip.disclaimer { display: none; }
+}

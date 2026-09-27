@@ -1,13 +1,5 @@
-# Lifts
+# Lifts and daily logs
 
-Optional session logs. One file per date (or week).
+Session files are optional backups. The live logger is **[Daily log](https://brandnu76.github.io/health-log/log.html)** (`docs/log.html`). That page stores days in the phone browser and can copy markdown for this folder.
 
-Template:
-
-```markdown
-# Lifts YYYY-MM-DD
-
-- Bench: load × reps × tempo
-- Main KB pattern(s): load × reps × tempo
-- Notes: energy, sleep, CPAP night, cut week vs refeed
-```
+Name files `YYYY-MM-DD.md`.

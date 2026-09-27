@@ -1,16 +1,19 @@
 # Consensus protocol (active)
 
-Seeded from Council analysis of **19 Sep 2026** scan. Revisit at week 8 checkpoint or sooner if lean markers slip.
+Active block: **28 Sep 2026 – 19 Dec 2026** (12 weeks). Seeded from Council review of 19 Sep Fitdays+ scan and 23 Sep Privia labs (A1c 5.9, fasting glucose 85). Revisit at week 12 A1c recheck or sooner if lean markers slip.
 
-1. **Weekly loss cap:** ≤1.0–1.5 lb/week average; if faster for 2+ weeks, add 200–300 kcal or a refeed day.
-2. **Protein:** 140–180 g/day, every day.
-3. **Training:** 3–4 hard sessions/week; progressive overload on main kettlebell and bench patterns; log load × reps × tempo.
-4. **Deficit rule:** Hold mild cut only while lifts hold or improve; if lifts stall *and* muscle/LBM field drifts down 2+ weeks, pause cut 2–3 weeks at maintenance.
-5. **Steps / NEAT:** Daily walking; do not add punishing cardio that undercuts recovery.
-6. **Sleep:** CPAP every night.
-7. **Supplements:** Creatine, whey as needed for protein, omega-3, vitamin D (dose per labs/clinician).
-8. **Scan cadence:** Same Fitdays+ protocol weekly or every 2 weeks; compare averages, not single days.
-9. **Waist:** Measure weekly; visceral + waist beat scale weight.
-10. **Labs (with clinician):** fasting glucose, A1c, fasting insulin if available, lipids, vitamin D.
-11. **Discard:** 140 lb ideal weight as a goal.
-12. **Week 8 checkpoint:** If fat mass and visceral still falling *and* LBM/muscle field and lifts are stable or up, continue; if lean markers slip, flip to mini-bulk / maintenance.
+This is a personal tracking protocol, not a prescription.
+
+1. **A1c lever:** No rice, bread, pasta, cakes, pies, soda, juice, or sweet tea. Optional starch only after a lift (4–6 oz sweet potato or ¾ cup berries). Zero starch on rest days.
+2. **Protein:** 160–180 g/day, every day. Do not cut protein to go low-carb.
+3. **Training:** Mon Lift A / Wed Lift B / Fri Lift C. Tempo 3-1-1 on grinds. Leave 2 reps in the tank. Log load × sets × reps on the Daily log page.
+4. **Walks:** Tue / Thu / Sat, 30–40+ min. Total walking ≥150 min/week. Lifting does not replace this.
+5. **Deficit rule:** Hold a mild cut only while lifts hold or improve. If lifts stall *and* muscle/LBM drifts down 2+ weeks, pause cut 2–3 weeks.
+6. **Weekly loss cap:** ≤1.0–1.5 lb/week average. Faster than that for 2+ weeks → add food, not more cardio.
+7. **Sleep:** CPAP every night.
+8. **Supplements:** Creatine 5 g, whey as needed for protein, omega-3, vitamin D (dose per clinician).
+9. **Scan cadence:** Same Fitdays+ protocol weekly or every 2 weeks. Compare averages, not single days.
+10. **Waist / visceral:** Beat scale weight.
+11. **Labs with clinician:** Repeat A1c around 16–23 Dec. Do not treat the 23 Sep B/C ratio flag or CBC color bars as disease — clinician already signed those as normal.
+12. **Discard:** 140 lb device “ideal weight.”
+13. **Log:** Use `docs/log.html` daily. Data lives on-device until you export JSON or paste markdown into `lifts/`.

@@ -1,6 +1,6 @@
 # Brandon's Health Log
 
-Private progress log for Fitdays+ body-composition trends, lift notes, and Council of Health analyses.
+Private progress log for Fitdays+ body-composition trends, lift notes, meals, and Council of Health analyses.
 
 **© 2026 Brandon Carroll. All rights reserved.** See [`LICENSE`](LICENSE). No permission is granted to copy, scrape, republish, or redistribute this work without prior written permission.
 
@@ -8,15 +8,17 @@ Private progress log for Fitdays+ body-composition trends, lift notes, and Counc
 
 ## Dashboard
 
-Live site (GitHub Pages): https://brandnu76.github.io/health-log/
+- Scans: https://brandnu76.github.io/health-log/
+- Daily workout + plate log: https://brandnu76.github.io/health-log/log.html
 
-Static UI in [`docs/`](docs/), driven by `docs/data.json`.
+Static UI in [`docs/`](docs/). Scans are driven by `docs/data.json`. Daily log entries live in the browser (`localStorage`) until you export JSON or paste markdown into `lifts/`.
 
 ### Local preview
 
 ```bash
 cd docs && python3 -m http.server 8080
 # open http://localhost:8080/
+# log page: http://localhost:8080/log.html
 ```
 
 ### GitHub Pages
@@ -26,12 +28,12 @@ Settings → Pages → Deploy from a branch → `main` / `/docs`.
 ## How to read this
 
 - `scans/` — raw metrics, same fields every time
-- `council/` — full Council write-ups for a given scan date
+- `council/` — full Council write-ups for a given scan or lab date
 - `progress.md` — newest-first changelog of deltas that matter
 - `PROFILE.md` — goals, training, nutrition stance
-- `PROTOCOL.md` — current 8–12 week consensus protocol
-- `lifts/` — optional load × reps × tempo logs
-- `docs/` — visual dashboard (`data.json` drives the UI)
+- `PROTOCOL.md` — current 12-week consensus protocol
+- `lifts/` — optional markdown backups of logged days
+- `docs/` — visual dashboard + daily logger
 - `LICENSE` — all rights reserved
 
 ## Rules
@@ -40,3 +42,4 @@ Settings → Pages → Deploy from a branch → `main` / `/docs`.
 - Ignore scale “ideal weight.”
 - Prefer waist + visceral + fat mass + lifts over scale theater.
 - Same scan conditions when possible: morning, post-bathroom, pre-food/coffee.
+- Daily log is for the 12-week A1c block (plate checks, walks, Lift A/B/C). It is not a calorie tracker.
