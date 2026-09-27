@@ -51,7 +51,27 @@
     </section>
     <section class="card card-pad">
       <h2>Plate</h2>
-      <p class="hint">Protein target 160–180 g. Starch only after a lift.</p>
+      <p class="hint">Protein target 160–180 g. Starch only after a lift. Search staples first; Packaged hits Open Food Facts (not MyFitnessPal).</p>
+      <div class="food-search">
+        <label class="field" style="margin-top:0"><span>Find food</span>
+          <input id="foodQuery" type="search" placeholder="chicken, eggs, ribeye…" autocomplete="off" />
+        </label>
+        <div class="food-search-row">
+          <label class="field" style="margin:0"><span>Add to</span>
+            <select id="foodMeal">
+              <option value="breakfast">Breakfast</option>
+              <option value="lunch">Lunch</option>
+              <option value="dinner">Dinner</option>
+              <option value="snack">Anchor snack</option>
+            </select>
+          </label>
+          <label class="field" style="margin:0"><span>Servings</span>
+            <input id="foodServings" type="number" min="0.25" step="0.25" value="1" inputmode="decimal" />
+          </label>
+          <button type="button" class="btn-export" id="foodPackagedBtn">Packaged</button>
+        </div>
+        <div id="foodResults" class="food-results"></div>
+      </div>
       <div id="mealGrid"></div>
       <div class="protein-total" id="proteinTotal">Protein logged: 0 g</div>
       <label class="field"><span>Post-meal glucose (optional, mg/dL)</span><input type="number" id="glucose" min="50" max="300" inputmode="numeric" placeholder="60–90 min after biggest meal" /></label>
@@ -65,5 +85,6 @@
   </main>
   <footer class="site-footer"><div class="wrap footer-grid"><p>Personal tracking only — not medical advice.</p><p class="footer-copy">© 2026 Brandon Carroll. All rights reserved.</p></div></footer>
   <script src="log.js"></script>
+  <script src="food.js"></script>
 </body>
 </html>
