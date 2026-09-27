@@ -25,6 +25,7 @@
       <div class="header-actions">
         <a class="chip" href="./">Scans</a>
         <span class="chip" id="weekChip">Week —</span>
+        <span class="chip" id="ghChip" title="GitHub sync">GitHub off</span>
         <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
           <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 0 0 11.5 11.5z"/></svg>
           <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
@@ -32,72 +33,54 @@
       </div>
     </div>
   </header>
-
   <main class="wrap log-main">
     <section class="card card-pad log-datebar">
-      <label class="log-date-label">
-        <span>Date</span>
-        <input type="date" id="logDate" />
-      </label>
+      <label class="log-date-label"><span>Date</span><input type="date" id="logDate" /></label>
       <p class="log-planned" id="plannedLabel">—</p>
       <div class="week-strip" id="weekStrip" aria-label="This week"></div>
     </section>
-
-    <section class="card card-pad">
-      <h2>Daily checks</h2>
-      <div class="check-grid" id="checkGrid"></div>
-    </section>
-
+    <section class="card card-pad"><h2>Daily checks</h2><div class="check-grid" id="checkGrid"></div></section>
     <section class="card card-pad">
       <h2>Work</h2>
       <div class="work-type" id="workType"></div>
-      <label class="field">
-        <span>Walk minutes</span>
-        <input type="number" id="walkMin" min="0" max="180" inputmode="numeric" placeholder="0" />
-      </label>
+      <label class="field"><span>Walk minutes</span><input type="number" id="walkMin" min="0" max="180" inputmode="numeric" placeholder="0" /></label>
       <div id="liftBlock" hidden>
         <h3 id="liftTitle">Lifts</h3>
-        <div class="table-wrap">
-          <table class="lift-table">
-            <thead>
-              <tr><th>Move</th><th>Load</th><th>Sets</th><th>Reps</th></tr>
-            </thead>
-            <tbody id="liftBody"></tbody>
-          </table>
-        </div>
+        <div class="table-wrap"><table class="lift-table"><thead><tr><th>Move</th><th>Load</th><th>Sets</th><th>Reps</th></tr></thead><tbody id="liftBody"></tbody></table></div>
       </div>
-      <label class="field">
-        <span>Session notes</span>
-        <textarea id="sessionNotes" rows="2" placeholder="Energy, sleep, anything ugly"></textarea>
-      </label>
+      <label class="field"><span>Session notes</span><textarea id="sessionNotes" rows="2" placeholder="Energy, sleep, anything ugly"></textarea></label>
     </section>
-
     <section class="card card-pad">
       <h2>Plate</h2>
       <p class="hint">Protein target 160–180 g. Starch only after a lift.</p>
       <div id="mealGrid"></div>
       <div class="protein-total" id="proteinTotal">Protein logged: 0 g</div>
-      <label class="field">
-        <span>Post-meal glucose (optional, mg/dL)</span>
-        <input type="number" id="glucose" min="50" max="300" inputmode="numeric" placeholder="60–90 min after biggest meal" />
-      </label>
+      <label class="field"><span>Post-meal glucose (optional, mg/dL)</span><input type="number" id="glucose" min="50" max="300" inputmode="numeric" placeholder="60–90 min after biggest meal" /></label>
     </section>
-
     <section class="log-actions">
-      <button type="button" class="btn-primary" id="saveBtn">Save day</button>
+      <button type="button" class="btn-primary" id="saveBtn">Save to GitHub</button>
+      <button type="button" class="btn-export" id="pullBtn">Pull</button>
       <button type="button" class="btn-export" id="exportBtn">Export JSON</button>
       <button type="button" class="btn-export" id="mdBtn">Copy markdown</button>
-      <label class="btn-export file-label">Import JSON<input type="file" id="importFile" accept="application/json" hidden /></label>
     </section>
-    <p class="hint" id="saveStatus">Saves on this phone in the browser. Export JSON if you want a backup in the repo.</p>
+    <p class="hint" id="saveStatus">Connect a token below so days commit to the private repo.</p>
+    <section class="card card-pad" id="ghSettings">
+      <h2>GitHub storage</h2>
+      <p class="hint">Days are written to <code>logs/daily.json</code> in the private <code>health-log</code> repo. That folder is outside Pages, so meals are not published on the public site. The token stays on this phone only.</p>
+      <ol class="hint-list">
+        <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained tokens</a>.</li>
+        <li>Resource owner <strong>brandnu76</strong>. Only repository <strong>health-log</strong>.</li>
+        <li>Permissions → Repository → Contents → <strong>Read and write</strong>.</li>
+        <li>Generate, paste below, tap Store token, then Pull.</li>
+      </ol>
+      <label class="field"><span>Fine-grained token</span><input type="password" id="ghToken" autocomplete="off" placeholder="github_pat_…" /></label>
+      <div class="log-actions" style="margin-top:0.75rem">
+        <button type="button" class="btn-export" id="storeTokenBtn">Store token</button>
+        <button type="button" class="btn-export" id="clearTokenBtn">Clear token</button>
+      </div>
+    </section>
   </main>
-
-  <footer class="site-footer">
-    <div class="wrap footer-grid">
-      <p>Personal tracking only — not medical advice.</p>
-      <p class="footer-copy">© 2026 Brandon Carroll. All rights reserved.</p>
-    </div>
-  </footer>
+  <footer class="site-footer"><div class="wrap footer-grid"><p>Personal tracking only — not medical advice.</p><p class="footer-copy">© 2026 Brandon Carroll. All rights reserved.</p></div></footer>
   <script src="log.js"></script>
 </body>
 </html>
