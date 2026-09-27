@@ -11,7 +11,7 @@ Private progress log for Fitdays+ body-composition trends, lift notes, meals, an
 - Scans: https://brandnu76.github.io/health-log/
 - Daily workout + plate log: https://brandnu76.github.io/health-log/log.html
 
-Static UI in [`docs/`](docs/). Scans are driven by `docs/data.json`. Daily meals and lifts live in [`logs/daily.json`](logs/daily.json) in this private repo (outside Pages). The logger page writes that file through the GitHub API using a fine-grained token stored only on the phone.
+Static UI in [`docs/`](docs/). Scans are driven by `docs/data.json`. The phone logger saves locally. Days land in [`logs/daily.json`](logs/daily.json) when pasted here and committed — no token on the phone.
 
 ### Local preview
 
@@ -32,7 +32,7 @@ Settings → Pages → Deploy from a branch → `main` / `/docs`.
 - `progress.md` — newest-first changelog of deltas that matter
 - `PROFILE.md` — goals, training, nutrition stance
 - `PROTOCOL.md` — current 12-week consensus protocol
-- `logs/` — daily meal and lift JSON (source of truth)
+- `logs/` — daily meal and lift JSON (GitHub copy)
 - `lifts/` — optional markdown backups of logged days
 - `docs/` — visual dashboard + daily logger
 - `LICENSE` — all rights reserved
@@ -44,4 +44,4 @@ Settings → Pages → Deploy from a branch → `main` / `/docs`.
 - Prefer waist + visceral + fat mass + lifts over scale theater.
 - Same scan conditions when possible: morning, post-bathroom, pre-food/coffee.
 - Daily log is for the 12-week A1c block (plate checks, walks, Lift A/B/C). It is not a calorie tracker.
-- Do not commit personal access tokens. Create a fine-grained PAT limited to this repo, Contents read/write only.
+- Do not put personal access tokens in the repo or on the logger page.
