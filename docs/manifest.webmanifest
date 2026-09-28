@@ -1,0 +1,26 @@
+{
+  "id": "/health-log/",
+  "name": "Brandon's Health Log",
+  "short_name": "Health Log",
+  "description": "Daily plate, kettlebell log, and body-scan tracker. Personal use only.",
+  "start_url": "./log.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#042f2e",
+  "theme_color": "#042f2e",
+  "lang": "en",
+  "categories": ["health", "fitness", "lifestyle"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Daily log", "short_name": "Log", "url": "./log.html" },
+    { "name": "Scans", "short_name": "Scans", "url": "./" }
+  ]
+}
