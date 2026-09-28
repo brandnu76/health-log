@@ -75,6 +75,11 @@
   font-size: 0.72rem;
   color: var(--text-subtle);
 }
+.chart-card-wide { grid-column: 1 / -1; }
+.chart-wrap-tall { height: 280px; }
+@media (min-width: 640px) {
+  .chart-wrap-tall { height: 320px; }
+}
 @media (max-width: 639px) {
   .header-actions .chip.disclaimer { display: none; }
 }
