@@ -5,7 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
   <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#042f2e" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Health Log" />
   <title>Daily log · Brandon's Health Log</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap" rel="stylesheet" />
@@ -23,6 +31,7 @@
         <span class="subtitle">12-week plate + kettlebell block · not medical advice</span>
       </div>
       <div class="header-actions">
+        <button type="button" class="chip" id="installBtn" hidden>Install app</button>
         <a class="chip" href="./">Scans</a>
         <span class="chip" id="weekChip">Week —</span>
         <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
@@ -86,5 +95,6 @@
   <footer class="site-footer"><div class="wrap footer-grid"><p>Personal tracking only — not medical advice.</p><p class="footer-copy">© 2026 Brandon Carroll. All rights reserved.</p></div></footer>
   <script src="log.js"></script>
   <script src="food.js"></script>
+  <script src="pwa.js"></script>
 </body>
 </html>
