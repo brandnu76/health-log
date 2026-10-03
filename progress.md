@@ -2,6 +2,14 @@
 
 Newest entry at the top.
 
+## 2026-10-03
+
+- Weight 200.8, BF 33.3%, fat 66.8, visceral 16.3, LBM 134.0, muscle mass 125.4 (07:56 weigh-in)
+- vs Sep 26: weight −1.6, BF −0.3 pp, fat −1.1, LBM −0.5, muscle mass −0.7 (new series low; prior low 125.9 on Sep 19), visceral −0.1, BMR −9. Fat and weight down well, but ~0.5 lb of the drop was lean and loss was above the 1 lb/wk cap; within BIA noise (earlier scan time, hydration), a flag not an alarm
+- vs Sep 13 (3 weeks): weight −3.2, fat −2.4
+- Scan: `scans/2026-10-03.md`
+- Council: `council/2026-10-03.md`
+
 ## 2026-09-26
 
 - Weight 202.4, BF 33.6%, fat 67.9, visceral 16.4, LBM 134.5, muscle mass 126.1 (09:37 weigh-in)
