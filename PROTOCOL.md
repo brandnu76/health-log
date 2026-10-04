@@ -17,3 +17,4 @@ This is a personal tracking protocol, not a prescription.
 11. **Labs with clinician:** Repeat A1c around 16–23 Dec. Do not treat the 23 Sep B/C ratio flag or CBC color bars as disease — clinician already signed those as normal.
 12. **Discard:** 140 lb device “ideal weight.”
 13. **Log:** Use `docs/log.html` daily. Data lives on-device until you export JSON or paste markdown into `lifts/`.
+14. **Fuel:** Cronometer weekly export (daily-nutrition CSV or summary screenshot) every Saturday with the scan. Protein band 140–180 g/day; under 5 logged days = low confidence. See `fuel/README.md`.
