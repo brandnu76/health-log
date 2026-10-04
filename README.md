@@ -33,7 +33,7 @@ Settings → Pages → Deploy from a branch → `main` / `/docs`.
 - `PROFILE.md` — goals, training, nutrition stance
 - `PROTOCOL.md` — current 12-week consensus protocol
 - `logs/` — daily meal and lift JSON (GitHub copy)
-- `lifts/` — optional markdown backups of logged days
+- `lifts/` — optional markdown backups of logged days, plus weekly Hevy strength summaries (optional; see [`lifts/README.md`](lifts/README.md))
 - `fuel/` — Cronometer weekly nutrition summaries (optional; see [`fuel/README.md`](fuel/README.md))
 - `docs/` — visual dashboard + daily logger
 - `LICENSE` — all rights reserved

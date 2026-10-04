@@ -18,3 +18,4 @@ This is a personal tracking protocol, not a prescription.
 12. **Discard:** 140 lb device “ideal weight.”
 13. **Log:** Use `docs/log.html` daily. Data lives on-device until you export JSON or paste markdown into `lifts/`.
 14. **Fuel:** Cronometer weekly export (daily-nutrition CSV or summary screenshot) every Saturday with the scan. Protein band 140–180 g/day; under 5 logged days = low confidence. See `fuel/README.md`.
+15. **Lifts:** Hevy weekly export (CSV or week screenshot) every Saturday with the scan. Put implement weight and tempo in Hevy exercise notes. A main lift with no progress for 3 weeks is flagged: check food, sleep, and recovery first, then apply rule 5. See `lifts/README.md`.
