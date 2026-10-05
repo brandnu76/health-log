@@ -151,3 +151,9 @@
   outline-offset: 2px;
   z-index: 1;
 }
+.metric-card .value.is-empty {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text-muted);
+}
