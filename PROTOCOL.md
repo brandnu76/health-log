@@ -13,7 +13,7 @@ This is a personal tracking protocol, not a prescription.
 7. **Sleep:** CPAP every night.
 8. **Supplements:** Creatine 5 g, whey as needed for protein, omega-3, vitamin D (dose per clinician).
 9. **Scan cadence:** Same Fitdays+ protocol weekly or every 2 weeks. Compare averages, not single days.
-10. **Waist / visceral:** Beat scale weight.
+10. **Waist / visceral:** Beat scale weight. Saturday morning, at the navel, after a relaxed exhale, record waist as `scans[].waistIn` (inches) on that day's scan in `docs/data.json`. Leave it out when it was not measured. Height is stored once as `meta.subject.heightIn` (67). The waist-to-height goal is `goals.targets.whtrTarget` (0.5). Target waist inches = height × that goal. Do not hardcode either number in the dashboard.
 11. **Labs with clinician:** Repeat A1c around 16–23 Dec. Do not treat the 23 Sep B/C ratio flag or CBC color bars as disease — clinician already signed those as normal.
 12. **Discard:** 140 lb device “ideal weight.”
 13. **Log:** Use `docs/log.html` daily. Data lives on-device until you export JSON or paste markdown into `lifts/`.

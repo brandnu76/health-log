@@ -25,6 +25,16 @@ cd docs && python3 -m http.server 8080
 
 Settings → Pages → Deploy from a branch → `main` / `/docs`.
 
+### Saturday scan fields in `data.json`
+
+Log the Fitdays+ scan in `scans/` and on that day's object in `docs/data.json`. Leave unknown values out. Do not estimate them.
+
+- `scans[].waistIn` — waist circumference in inches. Saturday morning, at the navel, after a relaxed exhale. Omit or `null` when not measured. First reading: 36.625 on 2026-10-03.
+- `meta.subject.heightIn` — standing height in inches (`67`). One fact for the subject, not copied onto each scan. Waist-to-height ratio, FFMI, and FMI all use it.
+- `goals.targets.whtrTarget` — waist-to-height goal (`0.5`). Target waist inches = height × this value.
+
+FFMI is the scan's `lbm` in kilograms divided by height in meters squared. FMI is `fatMass` in kilograms divided by height in meters squared. Both are Fitdays+ BIA trends, not DEXA. Scans missing `lbm` or `fatMass` are skipped and left blank.
+
 ## How to read this
 
 - `scans/` — raw metrics, same fields every time

@@ -8,6 +8,9 @@
   const THEME_KEY = "health-log-theme";
   const RANGE_KEY = "health-log-range";
   const BASELINE_ID = "2026-02-01";
+  // Avoirdupois pound and international inch. FFMI/FMI are BIA trends, not DEXA.
+  const LB_TO_KG = 0.45359237;
+  const IN_TO_M = 0.0254;
   const charts = [];
   let compositionChart = null;
   let appData = null;
@@ -39,6 +42,13 @@
       const s = v > 0 ? "+" : "";
       return s + v.toLocaleString("en-US", {
         minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+      });
+    },
+    flex(n, digits = 3) {
+      if (n == null || Number.isNaN(Number(n))) return "—";
+      return Number(n).toLocaleString("en-US", {
+        minimumFractionDigits: 0,
         maximumFractionDigits: digits,
       });
     },
@@ -167,7 +177,385 @@
       leanGainLb: t.leanGainLb != null ? t.leanGainLb : 20,
       leanMetric: t.leanMetric || "lbm",
       cutStart: t.cutStart || null,
+      whtrTarget:
+        t.whtrTarget != null && Number.isFinite(Number(t.whtrTarget))
+          ? Number(t.whtrTarget)
+          : null,
     };
+  }
+
+  function subjectHeightIn(data) {
+    const subject = data && data.meta && data.meta.subject;
+    const h = subject && subject.heightIn;
+    if (h == null || !Number.isFinite(Number(h)) || Number(h) <= 0) return null;
+    return Number(h);
+  }
+
+  /** kg/m² from a pound mass and a height in inches. Null when either input is missing. */
+  function kgPerM2(lb, heightIn) {
+    if (lb == null || heightIn == null) return null;
+    const pounds = Number(lb);
+    const inches = Number(heightIn);
+    if (!Number.isFinite(pounds) || !Number.isFinite(inches) || inches <= 0) return null;
+    const meters = inches * IN_TO_M;
+    return (pounds * LB_TO_KG) / (meters * meters);
+  }
+
+  function ffmiOf(scan, heightIn) {
+    if (!scan || scan.lbm == null) return null;
+    return kgPerM2(scan.lbm, heightIn);
+  }
+
+  function fmiOf(scan, heightIn) {
+    if (!scan || scan.fatMass == null) return null;
+    return kgPerM2(scan.fatMass, heightIn);
+  }
+
+  function whtrOf(scan, heightIn) {
+    if (!scan || scan.waistIn == null || heightIn == null) return null;
+    const waist = Number(scan.waistIn);
+    const inches = Number(heightIn);
+    if (!Number.isFinite(waist) || !Number.isFinite(inches) || inches <= 0) return null;
+    return waist / inches;
+  }
+
+  function waistScans(scans) {
+    return (scans || []).filter(
+      (s) => s && s.waistIn != null && Number.isFinite(Number(s.waistIn))
+    );
+  }
+
+  function earliestScan(list) {
+    let best = null;
+    (list || []).forEach((s) => {
+      if (!best || String(s.date) < String(best.date)) best = s;
+    });
+    return best;
+  }
+
+  function latestScan(list) {
+    let best = null;
+    (list || []).forEach((s) => {
+      if (!best || String(s.date) >= String(best.date)) best = s;
+    });
+    return best;
+  }
+
+  function priorScan(list, current) {
+    if (!current) return null;
+    let best = null;
+    (list || []).forEach((s) => {
+      if (!s || s.id === current.id) return;
+      if (String(s.date) >= String(current.date)) return;
+      if (!best || String(s.date) > String(best.date)) best = s;
+    });
+    return best;
+  }
+
+  function deltaInfo(current, prior, { lowerBetter = true, digits = 1, eps = 0.05 } = {}) {
+    if (current == null || prior == null) return null;
+    const c = Number(current);
+    const p = Number(prior);
+    if (!Number.isFinite(c) || !Number.isFinite(p)) return null;
+    const d = c - p;
+    let tone = "neutral";
+    if (Math.abs(d) >= eps) {
+      const improved = lowerBetter ? d < 0 : d > 0;
+      tone = improved ? "good" : "caution";
+    }
+    return { value: d, tone, text: fmt.signed(d, digits) };
+  }
+
+  function appendMetricCard(root, spec) {
+    const el = document.createElement("article");
+    el.className = "card card-pad metric-card";
+    if (spec.band) el.classList.add("band-" + spec.band);
+    el.setAttribute("role", "listitem");
+    if (spec.title) el.title = spec.title;
+    const valueClass = spec.empty ? "value is-empty" : "value";
+    el.innerHTML =
+      '<span class="label">' +
+      spec.label +
+      "</span>" +
+      '<div class="' +
+      valueClass +
+      '">' +
+      spec.valueHtml +
+      "</div>" +
+      '<div class="delta-stack">' +
+      (spec.deltaHtml || "") +
+      "</div>";
+    root.appendChild(el);
+  }
+
+  function appendIndexCard(root, spec) {
+    if (spec.value == null) {
+      appendMetricCard(root, {
+        label: spec.label,
+        empty: true,
+        title: spec.title,
+        valueHtml: "Not measured",
+        deltaHtml:
+          '<span class="delta neutral">' + escapeHtml(spec.missing) + "</span>",
+      });
+      return;
+    }
+    const dFeb = deltaInfo(spec.value, spec.feb, {
+      lowerBetter: spec.lowerBetter,
+      digits: 1,
+      eps: 0.05,
+    });
+    const dPrev = deltaInfo(spec.value, spec.prev, {
+      lowerBetter: spec.lowerBetter,
+      digits: 1,
+      eps: 0.05,
+    });
+    const febLine = dFeb
+      ? '<span class="delta ' + dFeb.tone + '">' + dFeb.text + " vs Feb</span>"
+      : '<span class="delta neutral" title="' +
+        escapeHtml(spec.febTitle || "") +
+        '">Δ vs Feb n/a</span>';
+    let prevLine = "";
+    if (spec.hasPrev) {
+      prevLine = dPrev
+        ? '<span class="delta secondary ' +
+          dPrev.tone +
+          '">' +
+          dPrev.text +
+          " vs prior full</span>"
+        : '<span class="delta secondary neutral">— vs prior full</span>';
+    }
+    const bia =
+      '<span class="delta secondary neutral" title="' +
+      escapeHtml(spec.title || "") +
+      '">BIA trend · not DEXA</span>';
+    appendMetricCard(root, {
+      label: spec.label,
+      title: spec.title,
+      valueHtml: fmt.num(spec.value, 1) + '<span class="unit">kg/m²</span>',
+      deltaHtml: bia + febLine + prevLine,
+    });
+  }
+
+  function renderBodyCompCards(data, root) {
+    const scans = data.scans || [];
+    const height = subjectHeightIn(data);
+    const t = getTargets(data);
+    const baseline = findScan(scans, BASELINE_ID);
+    const latestFull = latestFullScan(scans);
+    const prevFull = latestFull ? previousFullScan(scans, latestFull) : null;
+    const waists = waistScans(scans);
+    const latestWaist = latestScan(waists);
+    const priorWaist = priorScan(waists, latestWaist);
+    const targetWaist =
+      height != null && t.whtrTarget != null ? height * t.whtrTarget : null;
+
+    if (!latestWaist) {
+      appendMetricCard(root, {
+        label: "Waist",
+        empty: true,
+        title: "Saturday morning at the navel, after a relaxed exhale.",
+        valueHtml: "Not measured",
+        deltaHtml: '<span class="delta neutral">No waist reading yet</span>',
+      });
+      appendMetricCard(root, {
+        label: "WHtR",
+        empty: true,
+        title: "Waist inches divided by height inches.",
+        valueHtml: "Not measured",
+        deltaHtml: '<span class="delta neutral">Needs a waist reading</span>',
+      });
+    } else {
+      const waist = Number(latestWaist.waistIn);
+      let waistBand = null;
+      if (targetWaist != null) {
+        waistBand = waist <= targetWaist + 1e-9 ? "good" : "caution";
+      }
+      const dWaist = priorWaist
+        ? deltaInfo(waist, Number(priorWaist.waistIn), {
+            lowerBetter: true,
+            digits: 3,
+            eps: 0.05,
+          })
+        : null;
+      const waistDelta = dWaist
+        ? '<span class="delta ' +
+          dWaist.tone +
+          '">' +
+          dWaist.text +
+          " in vs prior waist</span>"
+        : '<span class="delta neutral">First reading · no prior waist</span>';
+      appendMetricCard(root, {
+        label: "Waist",
+        band: waistBand,
+        title: "Saturday morning at the navel, after a relaxed exhale.",
+        valueHtml: fmt.flex(waist, 3) + '<span class="unit">in</span>',
+        deltaHtml: waistDelta,
+      });
+
+      const ratio = whtrOf(latestWaist, height);
+      if (ratio == null) {
+        appendMetricCard(root, {
+          label: "WHtR",
+          empty: true,
+          title: "Waist inches divided by height inches.",
+          valueHtml: "Not measured",
+          deltaHtml: '<span class="delta neutral">Height not logged</span>',
+        });
+      } else {
+        const whtrBand =
+          t.whtrTarget == null
+            ? null
+            : ratio <= t.whtrTarget + 1e-9
+              ? "good"
+              : "caution";
+        const priorRatio = priorWaist ? whtrOf(priorWaist, height) : null;
+        const dRatio =
+          priorRatio != null
+            ? deltaInfo(ratio, priorRatio, {
+                lowerBetter: true,
+                digits: 3,
+                eps: 0.0005,
+              })
+            : null;
+        const ratioDelta = dRatio
+          ? '<span class="delta ' +
+            dRatio.tone +
+            '">' +
+            dRatio.text +
+            " vs prior waist</span>"
+          : '<span class="delta neutral">Waist ÷ height' +
+            (t.whtrTarget != null
+              ? " · goal under " + fmt.flex(t.whtrTarget, 3)
+              : "") +
+            "</span>";
+        appendMetricCard(root, {
+          label: "WHtR",
+          band: whtrBand,
+          title: "Waist inches divided by height inches.",
+          valueHtml: fmt.num(ratio, 3),
+          deltaHtml: ratioDelta,
+        });
+      }
+    }
+
+    appendIndexCard(root, {
+      label: "FFMI",
+      title:
+        "Scan LBM in kg divided by height in m². Fitdays+ BIA trend, not a DEXA result.",
+      value: ffmiOf(latestFull, height),
+      feb: ffmiOf(baseline, height),
+      prev: ffmiOf(prevFull, height),
+      hasPrev: !!prevFull,
+      lowerBetter: false,
+      missing:
+        height == null
+          ? "Height not logged"
+          : !latestFull || latestFull.lbm == null
+            ? "No LBM on the latest full scan"
+            : "Not measured",
+      febTitle: "Feb baseline has no LBM, so FFMI is not compared to it.",
+    });
+    appendIndexCard(root, {
+      label: "FMI",
+      title:
+        "Scan fat mass in kg divided by height in m². Fitdays+ BIA trend, not a DEXA result.",
+      value: fmiOf(latestFull, height),
+      feb: fmiOf(baseline, height),
+      prev: fmiOf(prevFull, height),
+      hasPrev: !!prevFull,
+      lowerBetter: true,
+      missing:
+        height == null
+          ? "Height not logged"
+          : !latestFull || latestFull.fatMass == null
+            ? "No fat mass on the latest full scan"
+            : "Not measured",
+      febTitle: "Feb baseline has no fat mass, so FMI is not compared to it.",
+    });
+  }
+
+  function whtrSeries(scans, heightIn) {
+    if (heightIn == null) return [];
+    return (scans || [])
+      .filter((s) => whtrOf(s, heightIn) != null)
+      .map((s) => ({ x: s.date, y: whtrOf(s, heightIn), label: s.label }));
+  }
+
+  function setChartNote(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
+  function renderWhtrProgress(data, root, t) {
+    const height = subjectHeightIn(data);
+    if (!root || height == null || t.whtrTarget == null) return;
+    const waists = waistScans(data.scans || []);
+    const first = earliestScan(waists);
+    const latest = latestScan(waists);
+    if (!first || !latest) return;
+    const base = whtrOf(first, height);
+    const now = whtrOf(latest, height);
+    if (base == null || now == null) return;
+    const target = t.whtrTarget;
+    const targetWaist = height * target;
+    const inchesLeft = Number(latest.waistIn) - targetWaist;
+    let progressed;
+    if (base <= target) {
+      progressed = now <= target ? 1 : 0;
+    } else {
+      progressed = (base - now) / (base - target);
+      if (progressed < 0) progressed = 0;
+      if (progressed > 1) progressed = 1;
+    }
+    const atGoal = now <= target + 1e-9;
+    const fillClass = atGoal ? "good" : "caution";
+    const inchesTxt =
+      inchesLeft > 0.0005
+        ? fmt.flex(inchesLeft, 3) + " in still to go"
+        : inchesLeft < -0.0005
+          ? fmt.flex(-inchesLeft, 3) + " in under target waist"
+          : "At target waist";
+    const detail =
+      inchesLeft > 0.0005
+        ? fmt.flex(inchesLeft, 3) +
+          " in still to go from " +
+          fmt.flex(Number(latest.waistIn), 3) +
+          " in."
+        : "At or under the target waist.";
+    const firstNote =
+      first.id === latest.id
+        ? " First waist reading — no change since baseline."
+        : "";
+    const item = document.createElement("div");
+    item.className = "progress-item";
+    item.innerHTML = `
+        <h4>Waist-to-height → under ${fmt.flex(target, 3)}</h4>
+        <div class="progress-meta">
+          <span>Now ${fmt.num(now, 3)} · baseline ${fmt.num(base, 3)} on ${fmt.date(
+            first.date
+          )}</span>
+          <span>${inchesTxt}</span>
+        </div>
+        <div class="progress-track" role="progressbar" aria-valuenow="${Math.round(
+          progressed * 100
+        )}" aria-valuemin="0" aria-valuemax="100" aria-label="Progress from baseline waist-to-height ${fmt.num(
+          base,
+          3
+        )} toward under ${fmt.flex(target, 3)}">
+          <div class="progress-fill ${fillClass}" style="width:${(
+            progressed * 100
+          ).toFixed(1)}%"></div>
+        </div>
+        <p class="progress-sub">Target waist ${fmt.flex(
+          targetWaist,
+          3
+        )} in (${fmt.flex(height, 3)} in × ${fmt.flex(
+          target,
+          3
+        )}). ${detail}${firstNote}</p>
+      `;
+    root.appendChild(item);
   }
 
   function getChartRange() {
@@ -384,6 +772,8 @@
       root.appendChild(el);
     });
 
+    renderBodyCompCards(data, root);
+
     // Extra Sep 19 metrics
     const extras = [
       { key: "muscleRate", label: "Muscle rate", unit: "%" },
@@ -421,9 +811,10 @@
       .map((s) => ({ x: s.date, y: s[key], label: s.label }));
   }
 
-  function makeLineChart(canvasId, points, yLabel, refCfg) {
+  function makeLineChart(canvasId, points, yLabel, refCfg, extra) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || typeof Chart === "undefined") return null;
+    const digits = extra && extra.digits != null ? extra.digits : null;
     const colors = chartColors();
     const labels = points.map((p) => p.x);
     const values = points.map((p) => p.y);
@@ -466,6 +857,11 @@
         },
       },
     };
+    if (digits != null) {
+      pluginsOpt.tooltip.callbacks.label = function (ctx) {
+        return ctx.dataset.label + ": " + fmt.num(ctx.parsed.y, digits);
+      };
+    }
     if (refCfg) {
       pluginsOpt.refBands = {
         bands: (refCfg.bands || []).map((b) => ({
@@ -495,7 +891,7 @@
             borderWidth: 2,
             tension: 0.25,
             fill: true,
-            pointRadius: 5,
+            pointRadius: values.length === 1 ? 6 : 5,
             pointHoverRadius: 7,
             pointBackgroundColor: colors.accent,
             pointBorderColor: cssVar("--bg") || "#0f1419",
@@ -703,6 +1099,124 @@
     return chart;
   }
 
+  function makeMultiLineChart(canvasId, series, extra) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === "undefined") return null;
+    const digits = extra && extra.digits != null ? extra.digits : 1;
+    const colors = chartColors();
+    const pointBorder = cssVar("--bg") || "#0f1419";
+    const dateSeen = Object.create(null);
+    const labels = [];
+    (series || []).forEach((s) => {
+      (s.points || []).forEach((p) => {
+        if (!dateSeen[p.x]) {
+          dateSeen[p.x] = true;
+          labels.push(p.x);
+        }
+      });
+    });
+    labels.sort();
+    const roles = [];
+    const datasets = (series || []).map((s) => {
+      const byDate = Object.create(null);
+      (s.points || []).forEach((p) => {
+        byDate[p.x] = p.y;
+      });
+      const role = s.role || "accent";
+      roles.push(role);
+      const color = seriesColor(role, colors);
+      const realCount = (s.points || []).length;
+      return {
+        label: s.label,
+        data: labels.map((d) => (byDate[d] == null ? null : byDate[d])),
+        borderColor: color,
+        backgroundColor: color + "22",
+        borderWidth: 2,
+        tension: 0.25,
+        fill: false,
+        spanGaps: false,
+        pointRadius: realCount === 1 ? 6 : 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: color,
+        pointBorderColor: pointBorder,
+        pointBorderWidth: 2,
+      };
+    });
+    const allVals = [];
+    datasets.forEach((ds) => {
+      ds.data.forEach((v) => {
+        if (v != null && !Number.isNaN(Number(v))) allVals.push(Number(v));
+      });
+    });
+    const ext = extentPad(allVals);
+
+    const chart = new Chart(canvas, {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: preferReducedMotion() ? false : { duration: 450 },
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: {
+            display: true,
+            position: "top",
+            labels: {
+              color: colors.text,
+              usePointStyle: true,
+              boxWidth: 8,
+              font: { family: "Inter, system-ui, sans-serif", size: 11 },
+            },
+          },
+          tooltip: {
+            filter(item) {
+              return item.raw != null;
+            },
+            callbacks: {
+              title(items) {
+                if (!items.length) return "";
+                return fmt.date(labels[items[0].dataIndex]);
+              },
+              label(ctx) {
+                if (ctx.raw == null) return null;
+                return ctx.dataset.label + ": " + fmt.num(ctx.raw, digits);
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: colors.text,
+              maxRotation: 0,
+              autoSkip: true,
+              callback(val, i) {
+                const iso = labels[i];
+                if (!iso) return "";
+                const d = new Date(iso + "T12:00:00");
+                return d.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                });
+              },
+            },
+            grid: { color: colors.grid, drawBorder: false },
+          },
+          y: {
+            ticks: { color: colors.text },
+            grid: { color: colors.grid, drawBorder: false },
+            suggestedMin: ext.suggestedMin,
+            suggestedMax: ext.suggestedMax,
+          },
+        },
+      },
+    });
+    chart.$colorRoles = roles;
+    charts.push(chart);
+    return chart;
+  }
+
   function refreshChartColors() {
     const colors = chartColors();
     const isLight =
@@ -762,6 +1276,9 @@
       "chartLbm",
       "chartMuscle",
       "chartFatLbm",
+      "chartWaist",
+      "chartWhtr",
+      "chartFfmiFmi",
     ].forEach((id) => {
       const c = typeof Chart !== "undefined" ? Chart.getChart(id) : null;
       if (c) c.destroy();
@@ -816,6 +1333,97 @@
     );
     makeFatLbmChart(ranged);
 
+    const height = subjectHeightIn(data);
+    const targetWaist =
+      height != null && t.whtrTarget != null ? height * t.whtrTarget : null;
+    const waistPts = seriesFor(ranged, "waistIn").filter((p) =>
+      Number.isFinite(Number(p.y))
+    );
+    const whtrPts = whtrSeries(ranged, height);
+    setChartNote(
+      "chartWaistNote",
+      (waistPts.length
+        ? "Saturday morning at the navel, relaxed exhale."
+        : "No waist readings in this range.") +
+        (targetWaist != null
+          ? " Dashed line is the target waist (" +
+            fmt.flex(targetWaist, 3) +
+            " in)."
+          : "") +
+        " Only logged waist readings are plotted."
+    );
+    makeLineChart(
+      "chartWaist",
+      waistPts,
+      "Waist (in)",
+      targetWaist != null
+        ? {
+            lines: [
+              {
+                value: targetWaist,
+                label: fmt.flex(targetWaist, 3),
+                color: colors.caution,
+              },
+            ],
+          }
+        : null,
+      { digits: 3 }
+    );
+    setChartNote(
+      "chartWhtrNote",
+      (whtrPts.length
+        ? "Waist divided by height."
+        : "No waist readings in this range.") +
+        (t.whtrTarget != null
+          ? " Dashed line is the goal (" + fmt.flex(t.whtrTarget, 3) + ")."
+          : "") +
+        " Only logged waist readings are plotted."
+    );
+    makeLineChart(
+      "chartWhtr",
+      whtrPts,
+      "WHtR",
+      t.whtrTarget != null
+        ? {
+            lines: [
+              {
+                value: t.whtrTarget,
+                label: fmt.flex(t.whtrTarget, 3),
+                color: colors.caution,
+              },
+            ],
+          }
+        : null,
+      { digits: 3 }
+    );
+
+    const ffmiPts = [];
+    const fmiPts = [];
+    if (height != null) {
+      ranged.forEach((s) => {
+        const ff = ffmiOf(s, height);
+        const fm = fmiOf(s, height);
+        if (ff != null) ffmiPts.push({ x: s.date, y: ff });
+        if (fm != null) fmiPts.push({ x: s.date, y: fm });
+      });
+    }
+    setChartNote(
+      "chartFfmiNote",
+      height == null
+        ? "FFMI and FMI need a logged height. Nothing is estimated without it."
+        : "BIA-estimated trend from scan LBM and fat mass divided by height squared (" +
+          fmt.flex(height, 3) +
+          " in). Not DEXA. Scans missing LBM or fat mass are left blank."
+    );
+    makeMultiLineChart(
+      "chartFfmiFmi",
+      [
+        { label: "FFMI (kg/m²)", role: "accent", points: ffmiPts },
+        { label: "FMI (kg/m²)", role: "fat", points: fmiPts },
+      ],
+      { digits: 2 }
+    );
+
     renderComposition(data);
   }
 
@@ -852,6 +1460,16 @@
             `Muscle ${fmt.num(s.muscleMass)} lb${
               s.labelUncertain || s.muscleMassApprox ? " (label uncertain)" : ""
             }`
+          );
+        }
+        if (s.waistIn != null && Number.isFinite(Number(s.waistIn))) {
+          const height = subjectHeightIn(data);
+          const ratio = whtrOf(s, height);
+          bits.push(
+            "Waist " +
+              fmt.flex(Number(s.waistIn), 3) +
+              " in" +
+              (ratio != null ? " · WHtR " + fmt.num(ratio, 3) : "")
           );
         }
         if (baseline && s.id !== baseline.id && s.weight != null && baseline.weight != null) {
@@ -1137,6 +1755,8 @@
       `;
       root.appendChild(item);
     }
+
+    renderWhtrProgress(data, root, t);
   }
 
   function renderPace(data) {
@@ -1405,12 +2025,33 @@
         noTone: true,
         uncertainNote: true,
       },
+      {
+        label: "Waist (in)",
+        digits: 3,
+        lowerBetter: true,
+        eps: 0.05,
+        value(s) {
+          if (!s || s.waistIn == null || !Number.isFinite(Number(s.waistIn))) {
+            return null;
+          }
+          return Number(s.waistIn);
+        },
+      },
+      {
+        label: "WHtR",
+        digits: 3,
+        lowerBetter: true,
+        eps: 0.0005,
+        value(s) {
+          return whtrOf(s, subjectHeightIn(data));
+        },
+      },
     ];
 
     metrics.forEach((m) => {
       const tr = document.createElement("tr");
-      const av = a ? a[m.key] : null;
-      const bv = b ? b[m.key] : null;
+      const av = m.value ? m.value(a) : a ? a[m.key] : null;
+      const bv = m.value ? m.value(b) : b ? b[m.key] : null;
       const dig = m.digits;
       const aTxt =
         av == null ? "—" : dig === 0 ? fmt.int(av) : fmt.num(av, dig);
@@ -1424,12 +2065,11 @@
         const d = bv - av;
         let tone = "neutral";
         if (!m.noTone) {
-          const info = deltaVsBaseline(
-            { [m.key]: bv },
-            { [m.key]: av },
-            m.key,
-            { lowerBetter: m.lowerBetter }
-          );
+          const info = deltaInfo(bv, av, {
+            lowerBetter: m.lowerBetter,
+            digits: dig,
+            eps: m.eps != null ? m.eps : 0.05,
+          });
           tone = info ? info.tone : "neutral";
         }
         if (
@@ -1492,10 +2132,23 @@
       "bmr",
       "bmi",
       "fatLossNote",
+      "waistIn",
+      "whtr",
     ];
+    const height = subjectHeightIn(data);
     const lines = [keys.join(",")];
     data.scans.forEach((s) => {
-      lines.push(keys.map((k) => csvEscape(s[k])).join(","));
+      lines.push(
+        keys
+          .map((k) => {
+            if (k === "whtr") {
+              const w = whtrOf(s, height);
+              return csvEscape(w == null ? null : Number(w).toFixed(3));
+            }
+            return csvEscape(s[k]);
+          })
+          .join(",")
+      );
     });
     const blob = new Blob([lines.join("\n") + "\n"], {
       type: "text/csv;charset=utf-8",
