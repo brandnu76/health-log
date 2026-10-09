@@ -11,6 +11,15 @@
 - Improve metabolic health / bring A1c under 5.7
 - Longevity
 
+## Program & medication
+
+- VA MOVE! weight program since 2025-05-30; start weight 241 lb (VA clinic scale)
+- Wegovy (semaglutide) since 2026-03-16; currently at max dose
+- Medication is managed by a VA pharmacist/clinician. The Council does not advise on dosing; questions go to the VA clinician
+- Pharmacist may taper to a maintenance dose once goal weight is reached
+- Latest VA clinic weigh-in: 201.6 lb on 2026-10-08 (−39.4 lb vs 241 start). Clinic scale is separate from Fitdays; compare each scale only to itself
+- Goal weight: 170 lb, checkpoint 185 lb — conditional on preserving lean mass (~134 lb LBM) and waist under 33.5 in (waist-to-height under 0.5 at 67 in)
+
 ## Training
 
 - Home: adjustable kettlebells, bench

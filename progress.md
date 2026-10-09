@@ -2,6 +2,13 @@
 
 Newest entry at the top.
 
+## 2026-10-09
+
+- Program context recorded: VA MOVE! since 2025-05-30 at 241 lb (VA clinic); Wegovy (semaglutide) since 2026-03-16, max dose, managed by VA pharmacist (Council does not advise dosing)
+- VA clinic weigh-in 2026-10-08: 201.6 lb (−39.4 lb vs program start). Clinic scale, not added to Fitdays scans; compare each scale to itself
+- Goal weight set: 170 lb with 185 lb checkpoint, conditional on preserving lean (~134 lb LBM) and waist under 33.5 in (WHtR under 0.5); pharmacist may taper to maintenance at goal
+- Dashboard: Program card (docs/program.js)
+
 ## 2026-10-03
 
 - Weight 200.8, BF 33.3%, fat 66.8, visceral 16.3, LBM 134.0, muscle mass 125.4 (07:56 weigh-in)
