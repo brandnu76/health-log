@@ -12,6 +12,10 @@ Weekly strength data from the Hevy app, logged next to the Saturday Fitdays+ sca
 
 **Not medical advice.** Hevy totals are only as good as what was logged.
 
+## Current plan
+
+**[4-week starter plan](plan-starter-4wk.md)** (started 2026-10-09). Mon / Wed / Fri about 5:15 PM, about 25 min, one full-body session repeated each day. While it runs, it replaces the Lift A / B / C split in `PROTOCOL.md`. After week 4 the Council reviews the logs and adds volume.
+
 ## Weekly workflow
 
 1. **During the week:** log every session in Hevy as it happens (Mon Lift A / Wed Lift B / Fri Lift C per `PROTOCOL.md`). Mark warm-up sets as warm-up so they are not counted.
@@ -27,7 +31,7 @@ A typical Hevy CSV has one row per set (columns such as `title`, `start_time`, `
 
 Pick **5–6 main lifts once** and keep the exact Hevy exercise names unchanged, so weeks line up. Cover push, pull, squat, hinge, and a carry or core movement (kettlebells + bench). Accessories are not tracked here.
 
-Main lifts chosen: _not yet set. Fill in after the first real week._
+Main lifts chosen: _not yet confirmed. Fill in after the first real week._ Planned names (from the [starter plan](plan-starter-4wk.md)): `Goblet Squat (Kettlebell)`, `Bench Press (Kettlebell)`, `One-Arm Row (Kettlebell)`, `Romanian Deadlift (Kettlebell)`, `Plank`.
 
 ## Tracked metrics
 

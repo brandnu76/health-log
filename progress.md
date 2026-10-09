@@ -8,6 +8,7 @@ Newest entry at the top.
 - VA clinic weigh-in 2026-10-08: 201.6 lb (−39.4 lb vs program start). Clinic scale, not added to Fitdays scans; compare each scale to itself
 - Goal weight set: 170 lb with 185 lb checkpoint, conditional on preserving lean (~134 lb LBM) and waist under 33.5 in (WHtR under 0.5); pharmacist may taper to maintenance at goal
 - Dashboard: Program card (docs/program.js)
+- Training: started 4-week starter plan (`lifts/plan-starter-4wk.md`), Mon/Wed/Fri ~25 min kettlebell + bench; previously not training
 
 ## 2026-10-03
 
