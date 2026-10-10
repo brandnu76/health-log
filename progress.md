@@ -8,8 +8,8 @@ Newest entry at the top.
 - vs Oct 3: weight −1.8, BF −0.2 pp, fat −0.9, LBM −0.9, muscle mass −0.6 (new series low; prior low 125.4 on Oct 3), visceral −0.1, BMR −11, protein mass −0.2. Second straight week of lean loss; roughly half the drop was lean and loss was above the 1 lb/wk cap. Lean-protection rule triggered
 - LBM 133.1 is below the August-cut floor (133.9 on Sep 19): new floor, lean-goal progress resets to 0
 - vs Sep 13 (4 weeks): weight −5.0, fat −3.3
+- Waist 36.32 in (−0.305 in vs 36.625 baseline Oct 3); WHtR 0.542 (was 0.547); ~2.82 in to 33.5 in target
 - Fix: start 4-week starter plan Mon 2026-10-12; protein swaps (plain Greek yogurt, whey in water on lift days, eggs); tell VA pharmacist about lean trend
-- No waist this week (baseline 36.625 in from Oct 3)
 - Scan: `scans/2026-10-10.md`
 - Council: `council/2026-10-10.md`
 
