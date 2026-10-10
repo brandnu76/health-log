@@ -2,6 +2,17 @@
 
 Newest entry at the top.
 
+## 2026-10-10
+
+- Weight 199.0, BF 33.1%, fat 65.9, visceral 16.2, LBM 133.1, muscle mass 124.8 (06:15 weigh-in, earliest yet). First scan under 200 lb
+- vs Oct 3: weight −1.8, BF −0.2 pp, fat −0.9, LBM −0.9, muscle mass −0.6 (new series low; prior low 125.4 on Oct 3), visceral −0.1, BMR −11, protein mass −0.2. Second straight week of lean loss; roughly half the drop was lean and loss was above the 1 lb/wk cap. Lean-protection rule triggered
+- LBM 133.1 is below the August-cut floor (133.9 on Sep 19): new floor, lean-goal progress resets to 0
+- vs Sep 13 (4 weeks): weight −5.0, fat −3.3
+- Fix: start 4-week starter plan Mon 2026-10-12; protein swaps (plain Greek yogurt, whey in water on lift days, eggs); tell VA pharmacist about lean trend
+- No waist this week (baseline 36.625 in from Oct 3)
+- Scan: `scans/2026-10-10.md`
+- Council: `council/2026-10-10.md`
+
 ## 2026-10-09
 
 - Program context recorded: VA MOVE! since 2025-05-30 at 241 lb (VA clinic); Wegovy (semaglutide) since 2026-03-16, max dose, managed by VA pharmacist (Council does not advise dosing)
