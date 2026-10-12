@@ -157,3 +157,79 @@
   letter-spacing: -0.015em;
   color: var(--text-muted);
 }
+
+.what-moved { margin-top: 1rem; }
+.what-moved h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.what-moved .moved-dates {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-subtle);
+}
+.moved-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.65rem;
+}
+.moved-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elevated) 60%, transparent);
+}
+.moved-item .mlabel {
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-subtle);
+}
+.moved-item .mvalue {
+  margin-top: 0;
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.moved-item .mdetail {
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+.what-moved .moved-caveat {
+  margin: 0.75rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+}
+
+.lean-decline:not([hidden]) {
+  margin: 0 0 1rem;
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--caution) 48%, var(--border));
+  background: var(--caution-soft);
+}
+.lean-decline h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--caution);
+}
+.lean-decline p {
+  margin: 0.4rem 0 0;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+.lean-decline .lean-values {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.lean-decline .lean-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}

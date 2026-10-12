@@ -219,6 +219,45 @@
     return waist / inches;
   }
 
+  function subjectSex(data) {
+    const subject = data && data.meta && data.meta.subject;
+    if (!subject || subject.sex == null) return null;
+    return String(subject.sex);
+  }
+
+  /** Woolcott & Bergman 2018. Men use 64, women 76. Ratio is unitless. */
+  function rfmConstant(sex) {
+    const s = String(sex == null ? "" : sex).trim().toLowerCase();
+    if (s === "male") return 64;
+    if (s === "female") return 76;
+    return null;
+  }
+
+  function rfmOf(scan, heightIn, sex) {
+    const constant = rfmConstant(sex);
+    if (constant == null || !scan || scan.waistIn == null || heightIn == null) {
+      return null;
+    }
+    const waist = Number(scan.waistIn);
+    const inches = Number(heightIn);
+    if (
+      !Number.isFinite(waist) ||
+      waist <= 0 ||
+      !Number.isFinite(inches) ||
+      inches <= 0
+    ) {
+      return null;
+    }
+    return constant - 20 * (inches / waist);
+  }
+
+  function numericField(scan, key) {
+    if (!scan || scan[key] == null || !Number.isFinite(Number(scan[key]))) {
+      return null;
+    }
+    return Number(scan[key]);
+  }
+
   function waistScans(scans) {
     return (scans || []).filter(
       (s) => s && s.waistIn != null && Number.isFinite(Number(s.waistIn))
@@ -439,6 +478,8 @@
       }
     }
 
+    appendRfmCard(root, data, latestWaist);
+
     appendIndexCard(root, {
       label: "FFMI",
       title:
@@ -475,11 +516,66 @@
     });
   }
 
+  function appendRfmCard(root, data, latestWaist) {
+    const title =
+      "Relative fat mass from height and waist (Woolcott & Bergman 2018). Tape estimate, not DEXA and not BIA.";
+    if (!latestWaist) {
+      appendMetricCard(root, {
+        label: "RFM",
+        empty: true,
+        title: title,
+        valueHtml: "Not measured",
+        deltaHtml: '<span class="delta neutral">Needs a waist reading</span>',
+      });
+      return;
+    }
+    const height = subjectHeightIn(data);
+    const sex = subjectSex(data);
+    const rfm = rfmOf(latestWaist, height, sex);
+    if (rfm == null) {
+      let why = "Needs a waist reading";
+      if (rfmConstant(sex) == null) why = "Sex not logged";
+      else if (height == null) why = "Height not logged";
+      appendMetricCard(root, {
+        label: "RFM",
+        empty: true,
+        title: title,
+        valueHtml: "Not measured",
+        deltaHtml:
+          '<span class="delta neutral">' + escapeHtml(why) + "</span>",
+      });
+      return;
+    }
+    let deltaHtml =
+      '<span class="delta neutral">Tape estimate · not DEXA · not BIA</span>';
+    const bia = numericField(latestWaist, "bf");
+    if (bia != null) {
+      deltaHtml =
+        '<span class="delta neutral">' +
+        fmt.signed(rfm - bia, 1) +
+        " vs BIA BF%</span>" +
+        '<span class="delta secondary neutral">Tape estimate · not DEXA · not BIA</span>';
+    }
+    appendMetricCard(root, {
+      label: "RFM",
+      title: title,
+      valueHtml: fmt.num(rfm, 1) + '<span class="unit">%</span>',
+      deltaHtml: deltaHtml,
+    });
+  }
+
   function whtrSeries(scans, heightIn) {
     if (heightIn == null) return [];
     return (scans || [])
       .filter((s) => whtrOf(s, heightIn) != null)
       .map((s) => ({ x: s.date, y: whtrOf(s, heightIn), label: s.label }));
+  }
+
+  function rfmSeries(scans, heightIn, sex) {
+    if (heightIn == null || rfmConstant(sex) == null) return [];
+    return (scans || [])
+      .filter((s) => rfmOf(s, heightIn, sex) != null)
+      .map((s) => ({ x: s.date, y: rfmOf(s, heightIn, sex), label: s.label }));
   }
 
   function setChartNote(id, text) {
@@ -803,6 +899,8 @@
       `;
       extraRoot.appendChild(item);
     });
+
+    renderWhatMoved(data);
   }
 
   function seriesFor(scans, key) {
@@ -1278,6 +1376,7 @@
       "chartFatLbm",
       "chartWaist",
       "chartWhtr",
+      "chartRfm",
       "chartFfmiFmi",
     ].forEach((id) => {
       const c = typeof Chart !== "undefined" ? Chart.getChart(id) : null;
@@ -1334,6 +1433,7 @@
     makeFatLbmChart(ranged);
 
     const height = subjectHeightIn(data);
+    const sex = subjectSex(data);
     const targetWaist =
       height != null && t.whtrTarget != null ? height * t.whtrTarget : null;
     const waistPts = seriesFor(ranged, "waistIn").filter((p) =>
@@ -1396,6 +1496,19 @@
         : null,
       { digits: 3 }
     );
+
+    const rfmPts = rfmSeries(ranged, height, sex);
+    const rfmBase = "Tape estimate · not DEXA · not BIA.";
+    let rfmLead = "Only logged waist readings are plotted. ";
+    if (rfmConstant(sex) == null) {
+      rfmLead = "Needs sex logged as male or female. ";
+    } else if (height == null) {
+      rfmLead = "Needs a logged height. ";
+    } else if (!rfmPts.length) {
+      rfmLead = "No waist readings in this range. ";
+    }
+    setChartNote("chartRfmNote", rfmLead + rfmBase);
+    makeLineChart("chartRfm", rfmPts, "RFM %", null, { digits: 1 });
 
     const ffmiPts = [];
     const fmiPts = [];
@@ -1465,11 +1578,13 @@
         if (s.waistIn != null && Number.isFinite(Number(s.waistIn))) {
           const height = subjectHeightIn(data);
           const ratio = whtrOf(s, height);
+          const rfm = rfmOf(s, height, subjectSex(data));
           bits.push(
             "Waist " +
               fmt.flex(Number(s.waistIn), 3) +
               " in" +
-              (ratio != null ? " · WHtR " + fmt.num(ratio, 3) : "")
+              (ratio != null ? " · WHtR " + fmt.num(ratio, 3) : "") +
+              (rfm != null ? " · RFM " + fmt.num(rfm, 1) + "%" : "")
           );
         }
         if (baseline && s.id !== baseline.id && s.weight != null && baseline.weight != null) {
@@ -1566,7 +1681,162 @@
       (latest ? fmt.date(latest.date) : "—");
   }
 
+  function lbmFullScans(scans) {
+    return fullScans(scans)
+      .map((s, i) => ({ s: s, i: i }))
+      .filter(({ s }) => numericField(s, "lbm") != null)
+      .sort((a, b) => {
+        if (String(a.s.date) < String(b.s.date)) return -1;
+        if (String(a.s.date) > String(b.s.date)) return 1;
+        return a.i - b.i;
+      })
+      .map(({ s }) => s);
+  }
+
+  function fatStillDropping(older, mid, latest) {
+    const keys = ["fatMass", "bf"];
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const a = numericField(older, key);
+      const b = numericField(mid, key);
+      const c = numericField(latest, key);
+      if (a == null || b == null || c == null) continue;
+      return c < b && c < a;
+    }
+    return false;
+  }
+
+  function renderLeanDecline(data) {
+    const root = document.getElementById("leanDecline");
+    if (!root) return;
+    root.hidden = true;
+    root.innerHTML = "";
+    const pool = lbmFullScans(data.scans || []);
+    if (pool.length < 3) return;
+    const older = pool[pool.length - 3];
+    const mid = pool[pool.length - 2];
+    const latest = pool[pool.length - 1];
+    const a = numericField(older, "lbm");
+    const b = numericField(mid, "lbm");
+    const c = numericField(latest, "lbm");
+    if (a == null || b == null || c == null || !(b < a && c < b)) return;
+    const priority = fatStillDropping(older, mid, latest)
+      ? "Preserving lean is the priority while fat is still dropping."
+      : "Preserving lean is the priority.";
+    const line =
+      fmt.date(older.date) +
+      " LBM " +
+      fmt.num(a, 1) +
+      " lb → " +
+      fmt.date(mid.date) +
+      " " +
+      fmt.num(b, 1) +
+      " lb → " +
+      fmt.date(latest.date) +
+      " " +
+      fmt.num(c, 1) +
+      " lb.";
+    root.hidden = false;
+    root.innerHTML =
+      "<h3>Lean mass is down two full scans in a row</h3>" +
+      '<p class="lean-values">' +
+      line +
+      "</p>" +
+      "<p>" +
+      priority +
+      "</p>" +
+      '<p class="lean-note">Not medical advice.</p>';
+  }
+
+  function renderWhatMoved(data) {
+    const root = document.getElementById("whatMoved");
+    if (!root) return;
+    root.hidden = true;
+    root.innerHTML = "";
+    const scans = data.scans || [];
+    const latest = latestFullScan(scans);
+    const prev = latest ? previousFullScan(scans, latest) : null;
+    if (!latest || !prev || prev.id === latest.id) return;
+    const specs = [
+      {
+        key: "weight",
+        label: "Weight",
+        unit: "lb",
+        digits: 1,
+        lowerBetter: true,
+      },
+      {
+        key: "fatMass",
+        label: "Fat mass",
+        unit: "lb",
+        digits: 1,
+        lowerBetter: true,
+      },
+      {
+        key: "lbm",
+        label: "LBM",
+        unit: "lb",
+        digits: 1,
+        lowerBetter: false,
+      },
+      {
+        key: "visceral",
+        label: "Visceral",
+        unit: "",
+        digits: 1,
+        lowerBetter: true,
+      },
+    ];
+    const rows = [];
+    specs.forEach((spec) => {
+      const cur = numericField(latest, spec.key);
+      const prior = numericField(prev, spec.key);
+      if (cur == null || prior == null) return;
+      const info = deltaInfo(cur, prior, {
+        lowerBetter: spec.lowerBetter,
+        digits: spec.digits,
+        eps: 0.05,
+      });
+      if (!info) return;
+      const unit = spec.unit ? " " + spec.unit : "";
+      const from = fmt.num(prior, spec.digits);
+      const to = fmt.num(cur, spec.digits);
+      rows.push(
+        '<div class="moved-item">' +
+          '<span class="mlabel">' +
+          escapeHtml(spec.label) +
+          "</span>" +
+          '<span class="mvalue delta ' +
+          info.tone +
+          '">' +
+          info.text +
+          unit +
+          "</span>" +
+          '<span class="mdetail">' +
+          from +
+          " → " +
+          to +
+          "</span>" +
+          "</div>"
+      );
+    });
+    if (!rows.length) return;
+    root.hidden = false;
+    root.innerHTML =
+      "<h3>What moved since the prior full scan</h3>" +
+      '<p class="moved-dates">' +
+      fmt.date(prev.date) +
+      " → " +
+      fmt.date(latest.date) +
+      "</p>" +
+      '<div class="moved-grid">' +
+      rows.join("") +
+      "</div>" +
+      '<p class="moved-caveat">BIA moves with hydration/timing — illustrative only.</p>';
+  }
+
   function renderGoalProgress(data) {
+    renderLeanDecline(data);
     const root = document.getElementById("goalProgressBars");
     if (!root) return;
     const t = getTargets(data);
@@ -2046,6 +2316,14 @@
           return whtrOf(s, subjectHeightIn(data));
         },
       },
+      {
+        label: "RFM %",
+        digits: 1,
+        lowerBetter: true,
+        value(s) {
+          return rfmOf(s, subjectHeightIn(data), subjectSex(data));
+        },
+      },
     ];
 
     metrics.forEach((m) => {
@@ -2134,8 +2412,10 @@
       "fatLossNote",
       "waistIn",
       "whtr",
+      "rfm",
     ];
     const height = subjectHeightIn(data);
+    const sex = subjectSex(data);
     const lines = [keys.join(",")];
     data.scans.forEach((s) => {
       lines.push(
@@ -2144,6 +2424,10 @@
             if (k === "whtr") {
               const w = whtrOf(s, height);
               return csvEscape(w == null ? null : Number(w).toFixed(3));
+            }
+            if (k === "rfm") {
+              const r = rfmOf(s, height, sex);
+              return csvEscape(r == null ? null : Number(r).toFixed(1));
             }
             return csvEscape(s[k]);
           })
