@@ -583,6 +583,61 @@
     if (el) el.textContent = text;
   }
 
+  function seriesSummary(points, label, digits) {
+    if (!points || !points.length) return label + ": no data in this range.";
+    const vals = points.map((p) => Number(p.y)).filter((v) => Number.isFinite(v));
+    if (!vals.length) return label + ": no numeric values in this range.";
+    const first = points[0];
+    const last = points[points.length - 1];
+    const min = Math.min.apply(null, vals);
+    const max = Math.max.apply(null, vals);
+    const d = digits != null ? digits : 1;
+    const change = Number(last.y) - Number(first.y);
+    const sign = change > 0 ? "+" : "";
+    return (
+      label +
+      ": " +
+      points.length +
+      " points. From " +
+      fmt.date(first.x) +
+      " (" +
+      fmt.num(first.y, d) +
+      ") to " +
+      fmt.date(last.x) +
+      " (" +
+      fmt.num(last.y, d) +
+      "), change " +
+      sign +
+      fmt.num(change, d) +
+      ". Range " +
+      fmt.num(min, d) +
+      " to " +
+      fmt.num(max, d) +
+      "."
+    );
+  }
+
+  function attachChartSummary(canvasId, text) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const sid = canvasId + "-summary";
+    let el = document.getElementById(sid);
+    if (!el) {
+      el = document.createElement("p");
+      el.id = sid;
+      el.className = "sr-only";
+      // Place after the canvas wrap so it stays in document order
+      const wrap = canvas.closest(".chart-wrap") || canvas.parentElement;
+      if (wrap && wrap.parentElement) {
+        wrap.parentElement.insertBefore(el, wrap.nextSibling);
+      } else {
+        canvas.insertAdjacentElement("afterend", el);
+      }
+    }
+    el.textContent = text;
+    canvas.setAttribute("aria-describedby", sid);
+  }
+
   function renderWhtrProgress(data, root, t) {
     const height = subjectHeightIn(data);
     if (!root || height == null || t.whtrTarget == null) return;
@@ -1537,6 +1592,29 @@
       { digits: 2 }
     );
 
+
+    // Accessible data summaries (screen-reader text derived from plotted points only)
+    attachChartSummary("chartWeight", seriesSummary(seriesFor(ranged, "weight"), "Weight in pounds", 1));
+    attachChartSummary("chartBf", seriesSummary(seriesFor(ranged, "bf"), "Body fat percent", 1));
+    attachChartSummary("chartFat", seriesSummary(seriesFor(ranged, "fatMass"), "Fat mass in pounds", 1));
+    attachChartSummary("chartVisceral", seriesSummary(seriesFor(ranged, "visceral"), "Visceral fat rating", 1));
+    attachChartSummary("chartLbm", seriesSummary(seriesFor(ranged, "lbm"), "Lean body mass in pounds", 1));
+    attachChartSummary("chartMuscle", seriesSummary(seriesFor(ranged, "muscleMass"), "Muscle mass in pounds", 1));
+    attachChartSummary("chartWaist", seriesSummary(waistPts, "Waist in inches", 2));
+    attachChartSummary("chartWhtr", seriesSummary(whtrPts, "Waist-to-height ratio", 3));
+    attachChartSummary("chartRfm", seriesSummary(rfmPts, "Relative fat mass percent", 1));
+    attachChartSummary(
+      "chartFfmiFmi",
+      seriesSummary(ffmiPts, "FFMI", 2) + " " + seriesSummary(fmiPts, "FMI", 2)
+    );
+    // Fat vs LBM dual chart
+    const fatPts = seriesFor(ranged, "fatMass");
+    const lbmPts = seriesFor(ranged, "lbm");
+    attachChartSummary(
+      "chartFatLbm",
+      seriesSummary(fatPts, "Fat mass in pounds", 1) + " " + seriesSummary(lbmPts, "Lean body mass in pounds", 1)
+    );
+
     renderComposition(data);
   }
 
@@ -2219,6 +2297,13 @@
       },
     });
     charts.push(compositionChart);
+
+    if (compositionChart && labels.length) {
+      const sum = slices.reduce((a, b) => a + b, 0);
+      const parts = labels.map((lab, i) => lab + " " + fmt.num(slices[i]) + " lb");
+      const text = "Composition of latest full scan: " + parts.join(", ") + ". Total " + fmt.num(sum) + " lb.";
+      attachChartSummary("chartComposition", text);
+    }
   }
 
   function scanOptionLabel(s) {
