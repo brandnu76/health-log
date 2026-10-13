@@ -1,4 +1,4 @@
-const CACHE = "health-log-v7";
+const CACHE = "health-log-v8";
 const PRECACHE = [
   "./",
   "./index.html",
@@ -19,7 +19,8 @@ const PRECACHE = [
   "./program.js",
   "./data.json",
   "./manifest.webmanifest",
-  "./icon.svg"
+  "./icon.svg",
+  "./vendor/chart.umd.min.js"
 ];
 
 self.addEventListener("install", function (event) {
