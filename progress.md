@@ -4,10 +4,10 @@ Newest entry at the top.
 
 ## 2026-10-17
 
-- Weight 201.4, BF 33.5%, fat 67.5, visceral 16.4, LBM 133.9, muscle mass 125.7 (09:03 weigh-in, ~3 h later than Oct 10)
-- vs Oct 10: weight +2.4, BF +0.4 pp, fat +1.6, LBM +0.8, muscle mass +0.9, visceral +0.2, BMR +12, protein mass +0.2. First lean gain after two weeks of decline: lean-loss streak broken. Lean floor stays at 133.1
+- Weight 201.2, BF 33.4%, fat 67.2, visceral 16.3, LBM 134.0, muscle mass 125.4 (09:12 weigh-in, ~3 h later than Oct 10)
+- vs Oct 10: weight +2.2, BF +0.3 pp, fat +1.3, LBM +0.9, muscle mass +0.6, visceral +0.1, BMR +12, protein mass +0.2. First lean gain after two weeks of decline: lean-loss streak broken. Lean floor stays at 133.1
 - Caveats: later scan time (more food/fluid) and week 1 of starter lifts (muscle water/glycogen retention) inflate weight and BIA lean; read as encouraging, not proven
-- vs Sep 13 (5 weeks): weight −2.6, fat −1.7
+- vs Sep 13 (5 weeks): weight −2.8, fat −2.0
 - Waist 36.32 in (unchanged vs Oct 10; −0.305 in vs 36.625 baseline); WHtR 0.542
 - Next: scan by 06:30 on Sat 2026-10-24
 - Scan: `scans/2026-10-17.md`
