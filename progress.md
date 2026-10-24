@@ -2,6 +2,17 @@
 
 Newest entry at the top.
 
+## 2026-10-24
+
+- Weight 200.0, BF 33.2%, fat 66.4, visceral 16.2, LBM 133.6, muscle mass 125.2 (09:47 weigh-in; Oct 17 was 09:12, so both late and comparable)
+- vs Oct 17: weight −1.2, BF −0.2 pp, fat −0.8, LBM −0.4, muscle mass −0.2, visceral −0.1, BMR −6, protein mass −0.2. Mostly fat loss; LBM stays above the 133.1 floor (unchanged)
+- vs Sep 13 (6 weeks): weight −4.0, fat −2.8
+- Waist 35.99 in, new low (−0.33 in vs Oct 17; −0.635 in vs 36.625 baseline); WHtR 0.537; ~2.49 in to 33.5 in target
+- Training: week 2 of starter plan done; week 3 (RIR 2) starts Mon 2026-10-26
+- Next: scan by 06:30 on Sat 2026-10-31
+- Scan: `scans/2026-10-24.md`
+- Council: `council/2026-10-24.md`
+
 ## 2026-10-17
 
 - Weight 201.2, BF 33.4%, fat 67.2, visceral 16.3, LBM 134.0, muscle mass 125.4 (09:12 weigh-in, ~3 h later than Oct 10)
