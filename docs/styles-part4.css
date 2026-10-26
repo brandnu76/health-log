@@ -233,3 +233,46 @@
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+.scan-time-note {
+  margin: -0.35rem 0 1rem;
+  max-width: 46rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.trend-method {
+  margin: -0.35rem 0 1rem;
+  max-width: 52rem;
+}
+.loss-window h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.loss-window .loss-dates {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-subtle);
+}
+.loss-window .loss-split,
+.loss-window .loss-flag {
+  margin: 0.75rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+.loss-window .loss-note {
+  margin: 0.55rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-subtle);
+}
+.loss-window.is-caution {
+  border-color: color-mix(in srgb, var(--caution) 48%, var(--border));
+  background: var(--caution-soft);
+}
+.loss-window.is-caution .loss-flag {
+  color: var(--caution);
+  font-weight: 650;
+}

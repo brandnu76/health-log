@@ -11,6 +11,15 @@
   // Avoirdupois pound and international inch. FFMI/FMI are BIA trends, not DEXA.
   const LB_TO_KG = 0.45359237;
   const IN_TO_M = 0.0254;
+  // Time-aware EWMA. A reading's influence halves every 21 days.
+  // For a gap of Δt days, α = 1 − exp(−Δt / τ) with τ = 21 / ln(2) ≈ 30.3 days.
+  // A 7-day gap is about α = 0.21. Partial scans are excluded by the caller.
+  const EWMA_HALF_LIFE_DAYS = 21;
+  const TREND_WINDOW_DAYS = 28;
+  // Flag the ~4-week window when lean mass is more than 25% of a weight loss
+  // (the review band was about 25–30%). The peak window is shown, not flagged.
+  const LEAN_LOSS_SHARE_FLAG = 0.25;
+  const WEIGHT_FLAT_LB = 0.05;
   const charts = [];
   let compositionChart = null;
   let appData = null;
@@ -152,6 +161,145 @@
     const a = new Date(isoA + "T12:00:00");
     const b = new Date(isoB + "T12:00:00");
     return Math.round((b - a) / 86400000);
+  }
+
+  /** "HH:MM" 24-hour local time, or null when absent or not that shape. */
+  function parseClock(value) {
+    if (value == null || value === "") return null;
+    const m = String(value).trim().match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+    if (!m) return null;
+    return {
+      text: m[1] + ":" + m[2],
+      minutes: Number(m[1]) * 60 + Number(m[2]),
+    };
+  }
+
+  function shiftIso(iso, days) {
+    const d = new Date(iso + "T12:00:00");
+    d.setDate(d.getDate() + days);
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+
+  function ewmaSeries(points) {
+    const tau = EWMA_HALF_LIFE_DAYS / Math.LN2;
+    const sorted = (points || [])
+      .filter((p) => p && p.x && p.y != null && Number.isFinite(Number(p.y)))
+      .map((p) => ({ x: p.x, y: Number(p.y) }))
+      .sort((a, b) => (a.x < b.x ? -1 : a.x > b.x ? 1 : 0));
+    if (!sorted.length) return [];
+    const out = [{ x: sorted[0].x, y: sorted[0].y }];
+    let level = sorted[0].y;
+    for (let i = 1; i < sorted.length; i++) {
+      const dt = daysBetween(sorted[i - 1].x, sorted[i].x);
+      const alpha = dt <= 0 ? 1 : 1 - Math.exp(-dt / tau);
+      level = alpha * sorted[i].y + (1 - alpha) * level;
+      out.push({ x: sorted[i].x, y: level });
+    }
+    return out;
+  }
+
+  function smoothedWindowRate(smooth, windowDays) {
+    if (!smooth || smooth.length < 2) return null;
+    const latest = smooth[smooth.length - 1];
+    const target = shiftIso(latest.x, -windowDays);
+    let best = null;
+    let bestDist = Infinity;
+    for (let i = 0; i < smooth.length - 1; i++) {
+      const dist = Math.abs(daysBetween(target, smooth[i].x));
+      if (
+        dist < bestDist ||
+        (dist === bestDist && best && smooth[i].x < best.x)
+      ) {
+        bestDist = dist;
+        best = smooth[i];
+      }
+    }
+    if (!best) return null;
+    const days = daysBetween(best.x, latest.x);
+    if (!(days > 0)) return null;
+    return {
+      from: best,
+      to: latest,
+      days: days,
+      perWeek: ((latest.y - best.y) / days) * 7,
+    };
+  }
+
+  function smoothPointsFor(scans, key) {
+    return ewmaSeries(
+      (scans || [])
+        .filter((s) => !s.partial && numericField(s, key) != null)
+        .map((s) => ({ x: s.date, y: numericField(s, key) }))
+    );
+  }
+
+  function trendRateNoteFrom(smooth) {
+    if (!smooth || smooth.length < 2) {
+      return "Not enough full scans for a smoothed trend. Partial scans are skipped.";
+    }
+    const rate = smoothedWindowRate(smooth, TREND_WINDOW_DAYS);
+    if (!rate) {
+      return "Dashed line: time-aware EWMA, 21-day half-life. Not enough span for a trend rate.";
+    }
+    return (
+      "Trend rate " +
+      fmt.signed(rate.perWeek, 2) +
+      " lb/week from the smoothed series (" +
+      fmt.date(rate.from.x) +
+      " → " +
+      fmt.date(rate.to.x) +
+      ", " +
+      rate.days +
+      " days). Dashed line: time-aware EWMA, 21-day half-life."
+    );
+  }
+
+  function setTrendNote(id, text) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.hidden = !text;
+    el.textContent = text || "";
+  }
+
+  /** Earliest full scan that holds the highest logged weight. */
+  function peakWeightScan(scans) {
+    const full = fullScans(scans).filter(
+      (s) => numericField(s, "weight") != null
+    );
+    if (!full.length) return null;
+    let best = full[0];
+    let bestW = numericField(best, "weight");
+    for (let i = 1; i < full.length; i++) {
+      const w = numericField(full[i], "weight");
+      if (w > bestW || (w === bestW && full[i].date < best.date)) {
+        best = full[i];
+        bestW = w;
+      }
+    }
+    return best;
+  }
+
+  /** Full scan nearest to `days` before latest, preferring the earlier date on a tie. */
+  function nearestFullBefore(scans, latest, days) {
+    if (!latest || !latest.date) return null;
+    const target = shiftIso(latest.date, -days);
+    let best = null;
+    let bestDist = Infinity;
+    fullScans(scans).forEach((s) => {
+      if (!s || s.id === latest.id || !(s.date < latest.date)) return;
+      if (numericField(s, "weight") == null) return;
+      const dist = Math.abs(daysBetween(target, s.date));
+      if (
+        dist < bestDist ||
+        (dist === bestDist && best && s.date < best.date)
+      ) {
+        bestDist = dist;
+        best = s;
+      }
+    });
+    return best;
   }
 
   function daysSince(iso) {
@@ -804,7 +952,14 @@
     const latest = latestFullScan(scans);
     const metaEl = document.getElementById("latestMeta");
     const prev = previousFullScan(scans, latest);
-    metaEl.textContent = `${fmt.date(latest.date)} · ${latest.label || "Scan"} · vs Feb & prior full`;
+    const latestClock = parseClock(latest && latest.scanTime);
+    metaEl.textContent =
+      fmt.date(latest.date) +
+      (latestClock ? " · " + latestClock.text : "") +
+      " · " +
+      (latest.label || "Scan") +
+      " · vs Feb & prior full";
+    renderScanTimeNote(data, latest);
 
     const cards = [
       {
@@ -956,6 +1111,7 @@
     });
 
     renderWhatMoved(data);
+    renderLossQuality(data);
   }
 
   function seriesFor(scans, key) {
@@ -971,6 +1127,17 @@
     const colors = chartColors();
     const labels = points.map((p) => p.x);
     const values = points.map((p) => p.y);
+    const smoothRaw = extra && extra.smooth;
+    let smoothValues = null;
+    if (smoothRaw && smoothRaw.length && labels.length) {
+      const byDate = Object.create(null);
+      smoothRaw.forEach((p) => {
+        if (!p || p.y == null || !Number.isFinite(Number(p.y))) return;
+        byDate[p.x] = Number(p.y);
+      });
+      const aligned = labels.map((d) => (byDate[d] == null ? null : byDate[d]));
+      if (aligned.some((v) => v != null)) smoothValues = aligned;
+    }
     const isLight =
       document.documentElement.getAttribute("data-theme") === "light";
     const bandColor = isLight
@@ -979,9 +1146,17 @@
 
     let suggestedMin;
     let suggestedMax;
-    if (values.length) {
-      let lo = Math.min.apply(null, values);
-      let hi = Math.max.apply(null, values);
+    const extentValues = values
+      .filter((v) => v != null && Number.isFinite(Number(v)))
+      .map(Number);
+    if (smoothValues) {
+      smoothValues.forEach((v) => {
+        if (v != null && Number.isFinite(v)) extentValues.push(v);
+      });
+    }
+    if (extentValues.length) {
+      let lo = Math.min.apply(null, extentValues);
+      let hi = Math.max.apply(null, extentValues);
       if (refCfg && refCfg.bands) {
         refCfg.bands.forEach((b) => {
           lo = Math.min(lo, b.min);
@@ -1002,6 +1177,9 @@
     const pluginsOpt = {
       legend: { display: false },
       tooltip: {
+        filter(item) {
+          return item.parsed && item.parsed.y != null && !Number.isNaN(item.parsed.y);
+        },
         callbacks: {
           title(items) {
             const i = items[0].dataIndex;
@@ -1031,26 +1209,49 @@
       };
     }
 
+    const pointBorder = cssVar("--bg") || "#0f1419";
+    const datasets = [
+      {
+        label: yLabel,
+        data: values,
+        borderColor: colors.accent,
+        backgroundColor: colors.accent + "22",
+        borderWidth: 2,
+        tension: 0.25,
+        fill: true,
+        pointRadius: values.length === 1 ? 6 : 5,
+        pointHoverRadius: 7,
+        pointBackgroundColor: colors.accent,
+        pointBorderColor: pointBorder,
+        pointBorderWidth: 2,
+      },
+    ];
+    if (smoothValues) {
+      const smoothColor = seriesColor("smooth", colors);
+      datasets.push({
+        label: "Smoothed",
+        data: smoothValues,
+        borderColor: smoothColor,
+        backgroundColor: "transparent",
+        borderWidth: 2,
+        borderDash: [5, 4],
+        tension: 0.25,
+        fill: false,
+        spanGaps: true,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHitRadius: 10,
+        pointBackgroundColor: smoothColor,
+        pointBorderColor: pointBorder,
+        pointBorderWidth: 2,
+      });
+    }
+
     const chart = new Chart(canvas, {
       type: "line",
       data: {
         labels,
-        datasets: [
-          {
-            label: yLabel,
-            data: values,
-            borderColor: colors.accent,
-            backgroundColor: colors.accent + "22",
-            borderWidth: 2,
-            tension: 0.25,
-            fill: true,
-            pointRadius: values.length === 1 ? 6 : 5,
-            pointHoverRadius: 7,
-            pointBackgroundColor: colors.accent,
-            pointBorderColor: cssVar("--bg") || "#0f1419",
-            pointBorderWidth: 2,
-          },
-        ],
+        datasets,
       },
       options: {
         responsive: true,
@@ -1086,7 +1287,7 @@
       },
       plugins: refCfg ? [refBandPlugin] : [],
     });
-    chart.$colorRoles = ["accent"];
+    chart.$colorRoles = smoothValues ? ["accent", "smooth"] : ["accent"];
     charts.push(chart);
     return chart;
   }
@@ -1095,6 +1296,11 @@
     if (role === "fat") return "#f472b6";
     if (role === "risk") return colors.risk;
     if (role === "caution") return colors.caution;
+    if (role === "smooth") {
+      const light =
+        document.documentElement.getAttribute("data-theme") === "light";
+      return light ? "#0f766e" : "#e2e8f0";
+    }
     return colors.accent;
   }
 
@@ -1389,11 +1595,19 @@
       if (!chart.data.datasets.length || !chart.options.scales) return;
       const roles = chart.$colorRoles || [];
       chart.data.datasets.forEach((ds, i) => {
-        const color = seriesColor(roles[i] || "accent", colors);
+        const role = roles[i] || "accent";
+        const color = seriesColor(role, colors);
         ds.borderColor = color;
-        ds.backgroundColor = color + "22";
         ds.pointBackgroundColor = color;
         ds.pointBorderColor = pointBorder;
+        if (role === "smooth") {
+          ds.backgroundColor = "transparent";
+          ds.borderDash = [5, 4];
+          ds.pointRadius = 0;
+          ds.fill = false;
+        } else {
+          ds.backgroundColor = color + "22";
+        }
       });
       const axisRoles = chart.$axisRoles || { y: roles[0] || "accent" };
       Object.keys(chart.options.scales).forEach((axisId) => {
@@ -1442,19 +1656,29 @@
     const colors = chartColors();
     const ranged = scansInRange(data.scans, chartRange);
 
+    const weightSmooth = smoothPointsFor(data.scans, "weight");
+    const weightTrend = trendRateNoteFrom(weightSmooth);
     makeLineChart(
       "chartWeight",
       seriesFor(ranged, "weight"),
-      "Weight (lb)"
+      "Weight (lb)",
+      null,
+      { smooth: weightSmooth }
     );
+    setTrendNote("chartWeightTrend", weightTrend);
     makeLineChart("chartBf", seriesFor(ranged, "bf"), "Body fat %", {
       bands: [{ min: t.bfBandMin, max: t.bfBandMax }],
     });
+    const fatSmooth = smoothPointsFor(data.scans, "fatMass");
+    const fatTrend = trendRateNoteFrom(fatSmooth);
     makeLineChart(
       "chartFat",
       seriesFor(ranged, "fatMass"),
-      "Fat mass (lb)"
+      "Fat mass (lb)",
+      null,
+      { smooth: fatSmooth }
     );
+    setTrendNote("chartFatTrend", fatTrend);
     makeLineChart(
       "chartVisceral",
       seriesFor(ranged, "visceral"),
@@ -1475,11 +1699,16 @@
         ],
       }
     );
+    const lbmSmooth = smoothPointsFor(data.scans, "lbm");
+    const lbmTrend = trendRateNoteFrom(lbmSmooth);
     makeLineChart(
       "chartLbm",
       seriesFor(ranged, "lbm"),
-      "Lean body mass (lb)"
+      "Lean body mass (lb)",
+      null,
+      { smooth: lbmSmooth }
     );
+    setTrendNote("chartLbmTrend", lbmTrend);
     makeLineChart(
       "chartMuscle",
       seriesFor(ranged, "muscleMass"),
@@ -1594,11 +1823,26 @@
 
 
     // Accessible data summaries (screen-reader text derived from plotted points only)
-    attachChartSummary("chartWeight", seriesSummary(seriesFor(ranged, "weight"), "Weight in pounds", 1));
+    attachChartSummary(
+      "chartWeight",
+      seriesSummary(seriesFor(ranged, "weight"), "Weight in pounds", 1) +
+        " " +
+        weightTrend
+    );
     attachChartSummary("chartBf", seriesSummary(seriesFor(ranged, "bf"), "Body fat percent", 1));
-    attachChartSummary("chartFat", seriesSummary(seriesFor(ranged, "fatMass"), "Fat mass in pounds", 1));
+    attachChartSummary(
+      "chartFat",
+      seriesSummary(seriesFor(ranged, "fatMass"), "Fat mass in pounds", 1) +
+        " " +
+        fatTrend
+    );
     attachChartSummary("chartVisceral", seriesSummary(seriesFor(ranged, "visceral"), "Visceral fat rating", 1));
-    attachChartSummary("chartLbm", seriesSummary(seriesFor(ranged, "lbm"), "Lean body mass in pounds", 1));
+    attachChartSummary(
+      "chartLbm",
+      seriesSummary(seriesFor(ranged, "lbm"), "Lean body mass in pounds", 1) +
+        " " +
+        lbmTrend
+    );
     attachChartSummary("chartMuscle", seriesSummary(seriesFor(ranged, "muscleMass"), "Muscle mass in pounds", 1));
     attachChartSummary("chartWaist", seriesSummary(waistPts, "Waist in inches", 2));
     attachChartSummary("chartWhtr", seriesSummary(whtrPts, "Waist-to-height ratio", 3));
@@ -1680,7 +1924,9 @@
 
       li.innerHTML = `
         <span class="timeline-dot" aria-hidden="true"></span>
-        <div class="timeline-date">${fmt.date(s.date)}</div>
+        <div class="timeline-date">${fmt.date(s.date)}${
+          parseClock(s.scanTime) ? " · " + escapeHtml(parseClock(s.scanTime).text) : ""
+        }</div>
         <div class="timeline-label">${s.label || "Scan"}${
         s.partial ? '<span class="badge">Partial</span>' : ""
       }</div>
@@ -1911,6 +2157,241 @@
       rows.join("") +
       "</div>" +
       '<p class="moved-caveat">BIA moves with hydration/timing — illustrative only.</p>';
+  }
+
+  function renderScanTimeNote(data, latest) {
+    const el = document.getElementById("scanTimeNote");
+    if (!el) return;
+    el.hidden = true;
+    el.textContent = "";
+    const clock = parseClock(latest && latest.scanTime);
+    const targets = (data && data.goals && data.goals.targets) || {};
+    const target = parseClock(targets.scanTimeTarget);
+    if (!clock || !target || clock.minutes <= target.minutes) return;
+    el.hidden = false;
+    el.textContent =
+      "Latest scan was at " +
+      clock.text +
+      ", after the " +
+      target.text +
+      " target. BIA readings vary with time of day and hydration, so compare like-for-like.";
+  }
+
+  function lossDeltaItem(label, delta, start, end, unit, caution) {
+    const missing = delta == null;
+    const unitTxt = unit ? " " + unit : "";
+    const value = missing ? "—" : fmt.signed(delta, 1) + unitTxt;
+    const detail = missing
+      ? "Not on both scans"
+      : fmt.num(start, 1) + " → " + fmt.num(end, 1);
+    return (
+      '<div class="moved-item">' +
+      '<span class="mlabel">' +
+      escapeHtml(label) +
+      "</span>" +
+      '<span class="mvalue' +
+      (caution ? " delta caution" : "") +
+      '">' +
+      value +
+      "</span>" +
+      '<span class="mdetail">' +
+      escapeHtml(detail) +
+      "</span>" +
+      "</div>"
+    );
+  }
+
+  function lossWindowCard(spec) {
+    if (spec.empty) {
+      return (
+        '<article class="card card-pad loss-window">' +
+        "<h3>" +
+        escapeHtml(spec.title) +
+        "</h3>" +
+        '<p class="loss-note">' +
+        escapeHtml(spec.empty) +
+        "</p>" +
+        "</article>"
+      );
+    }
+    const start = spec.start;
+    const end = spec.end;
+    const w0 = numericField(start, "weight");
+    const w1 = numericField(end, "weight");
+    const f0 = numericField(start, "fatMass");
+    const f1 = numericField(end, "fatMass");
+    const l0 = numericField(start, "lbm");
+    const l1 = numericField(end, "lbm");
+    const weightDelta = w0 != null && w1 != null ? w1 - w0 : null;
+    const fatDelta = f0 != null && f1 != null ? f1 - f0 : null;
+    const lbmDelta = l0 != null && l1 != null ? l1 - l0 : null;
+    const days = daysBetween(start.date, end.date);
+    let mode = "missing-weight";
+    if (weightDelta == null) mode = "missing-weight";
+    else if (Math.abs(weightDelta) < WEIGHT_FLAT_LB) mode = "flat";
+    else if (weightDelta < 0) mode = "loss";
+    else mode = "gain";
+    const canSplit = mode === "loss" || mode === "gain";
+    const fatShare =
+      canSplit && fatDelta != null ? fatDelta / weightDelta : null;
+    const leanShare =
+      canSplit && lbmDelta != null ? lbmDelta / weightDelta : null;
+    const bothShares =
+      fatShare != null &&
+      fatShare >= 0 &&
+      leanShare != null &&
+      leanShare >= 0;
+    const flag =
+      !!spec.flag &&
+      mode === "loss" &&
+      leanShare != null &&
+      leanShare > LEAN_LOSS_SHARE_FLAG;
+
+    let split;
+    if (mode === "flat") {
+      split =
+        "Weight was flat, so there is no loss to split into fat and lean.";
+    } else if (mode === "missing-weight") {
+      split =
+        "Weight isn't on both scans, so this window isn't split into fat and lean.";
+    } else if (mode === "gain") {
+      split = "Weight went up, so this window is a gain rather than a loss.";
+      if (bothShares) {
+        split +=
+          " Of the gain, " +
+          fmt.num(fatShare * 100, 1) +
+          "% was fat mass and " +
+          fmt.num(leanShare * 100, 1) +
+          "% was lean mass.";
+      } else if (fatDelta == null || lbmDelta == null) {
+        split +=
+          " A field is missing on one of the scans, so the gain isn't split further.";
+      } else {
+        split +=
+          " Fat and lean didn't both rise with the scale, so the gain isn't split into shares.";
+      }
+    } else if (bothShares) {
+      split =
+        "Of the loss, " +
+        fmt.num(fatShare * 100, 1) +
+        "% was fat mass and " +
+        fmt.num(leanShare * 100, 1) +
+        "% was lean mass.";
+    } else if (fatDelta == null || lbmDelta == null) {
+      split =
+        "A fat or lean field is missing on one of the scans, so the loss isn't split into shares.";
+    } else if (lbmDelta > 0 && fatDelta < 0) {
+      split =
+        "Fat mass fell and lean mass rose, so the scale loss wasn't a split of both going down.";
+    } else if (fatDelta > 0 && lbmDelta < 0) {
+      split =
+        "Lean mass fell and fat mass rose, so this wasn't a fat-led loss.";
+    } else {
+      split =
+        "Fat and lean didn't both fall with the scale, so the loss isn't split into shares.";
+    }
+
+    let flagText = "";
+    if (flag) {
+      flagText = bothShares
+        ? "Lean mass was " +
+          fmt.num(leanShare * 100, 1) +
+          "% of the weight lost in this window, above 25%. A larger lean share on a short window can come from a fast drop, hydration, or the time of day. Not a diagnosis."
+        : "Lean mass made up more of this weight loss than the 25% line for a 4-week window. A larger lean share can come from a fast drop, hydration, or the time of day. Not a diagnosis.";
+    }
+    const dayLabel = days === 1 ? "1 day" : days + " days";
+    const dates =
+      fmt.date(start.date) +
+      " → " +
+      fmt.date(end.date) +
+      " · " +
+      dayLabel +
+      (spec.hint ? " · " + spec.hint : "");
+    const note = bothShares
+      ? "Shares are each change divided by the weight change. They are not adjusted to total 100%. Logged fields only."
+      : "Logged weight, fat mass, and lean body mass only. Nothing here is estimated.";
+
+    return (
+      '<article class="card card-pad loss-window' +
+      (flag ? " is-caution" : "") +
+      '">' +
+      "<h3>" +
+      escapeHtml(spec.title) +
+      "</h3>" +
+      '<p class="loss-dates">' +
+      escapeHtml(dates) +
+      "</p>" +
+      '<div class="moved-grid">' +
+      lossDeltaItem("Weight", weightDelta, w0, w1, "lb", false) +
+      lossDeltaItem("Fat mass", fatDelta, f0, f1, "lb", false) +
+      lossDeltaItem("Lean mass", lbmDelta, l0, l1, "lb", flag) +
+      "</div>" +
+      '<p class="loss-split">' +
+      escapeHtml(split) +
+      "</p>" +
+      (flagText
+        ? '<p class="loss-flag">' + escapeHtml(flagText) + "</p>"
+        : "") +
+      '<p class="loss-note">' +
+      escapeHtml(note) +
+      "</p>" +
+      "</article>"
+    );
+  }
+
+  function renderLossQuality(data) {
+    const root = document.getElementById("lossQuality");
+    const section = document.getElementById("lossQualitySection");
+    if (!root) return;
+    const scans = (data && data.scans) || [];
+    const latest = latestFullScan(scans);
+    if (!latest || numericField(latest, "weight") == null || latest.partial) {
+      root.innerHTML = "";
+      if (section) section.hidden = true;
+      return;
+    }
+    const peak = peakWeightScan(scans);
+    const prior = nearestFullBefore(scans, latest, TREND_WINDOW_DAYS);
+    const cards = [];
+    if (!peak || peak.id === latest.id) {
+      cards.push(
+        lossWindowCard({
+          title: "From the peak full scan",
+          empty:
+            "The latest full scan is the heaviest, so there is no drop from an earlier peak.",
+        })
+      );
+    } else {
+      cards.push(
+        lossWindowCard({
+          title: "From the peak full scan",
+          start: peak,
+          end: latest,
+          hint: "highest weight among full scans",
+          flag: false,
+        })
+      );
+    }
+    if (!prior) {
+      cards.push(
+        lossWindowCard({
+          title: "Last ~4 weeks",
+          empty: "No earlier full scan to compare with the latest one.",
+        })
+      );
+    } else {
+      cards.push(
+        lossWindowCard({
+          title: "Last ~4 weeks",
+          start: prior,
+          end: latest,
+          hint: "nearest full scan to 28 days earlier",
+          flag: true,
+        })
+      );
+    }
+    root.innerHTML = cards.join("");
+    if (section) section.hidden = false;
   }
 
   function renderGoalProgress(data) {
@@ -2498,6 +2979,7 @@
       "waistIn",
       "whtr",
       "rfm",
+      "scanTime",
     ];
     const height = subjectHeightIn(data);
     const sex = subjectSex(data);
