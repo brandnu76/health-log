@@ -2,6 +2,18 @@
 
 Newest entry at the top.
 
+## 2026-11-01
+
+- Weight 200.2, BF 33.2%, fat 66.4, visceral 16.2, LBM 133.8, muscle mass 125.2 (10:48 Sunday weigh-in, replacing Saturday because of travel)
+- vs Oct 24: weight +0.2, BF 0, fat 0, LBM +0.2, muscle mass 0, visceral 0, BMR +2. Flat week; LBM stays above the 133.1 floor (unchanged)
+- Confounders: late scan (target 06:30), Sunday after travel to Jacksonville, flu shot Oct 27 (possible water)
+- vs Sep 13 (7 weeks): weight −3.8, fat −2.8
+- Waist 36.58 in (+0.59 in vs 35.99 on Oct 24); WHtR 0.546. Likely post-travel bloat/water, not regain, since fat mass was flat
+- Training: week 3 of starter plan (higher volume) may help explain lean holding; week 4 ends Fri 2026-11-06
+- Next: scan by 06:30 on Sat 2026-11-07
+- Scan: `scans/2026-11-01.md`
+- Council: `council/2026-11-01.md`
+
 ## 2026-10-24
 
 - Weight 200.0, BF 33.2%, fat 66.4, visceral 16.2, LBM 133.6, muscle mass 125.2 (09:47 weigh-in; Oct 17 was 09:12, so both late and comparable)
