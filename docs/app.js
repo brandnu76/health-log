@@ -16,6 +16,14 @@
   // A 7-day gap is about α = 0.21. Partial scans are excluded by the caller.
   const EWMA_HALF_LIFE_DAYS = 21;
   const TREND_WINDOW_DAYS = 28;
+  // Longer pace window. When cutStart falls inside it, the window starts there.
+  const LONG_TREND_WINDOW_DAYS = 84;
+  // Stall when recent smoothed weight and fat mass are both inside this band.
+  const STALL_LB_PER_WEEK = 0.25;
+  const STALL_MIN_DAYS = 28;
+  const STALL_MIN_SCANS = 3;
+  // Slower than this is treated as flat so the ETA is not an enormous date.
+  const PACE_FLAT_LB_PER_WEEK = 0.05;
   // Flag the ~4-week window when lean mass is more than 25% of a weight loss
   // (the review band was about 25–30%). The peak window is shown, not flagged.
   const LEAN_LOSS_SHARE_FLAG = 0.25;
@@ -200,10 +208,11 @@
     return out;
   }
 
-  function smoothedWindowRate(smooth, windowDays) {
+  function smoothedWindowRate(smooth, windowDays, floorIso) {
     if (!smooth || smooth.length < 2) return null;
     const latest = smooth[smooth.length - 1];
-    const target = shiftIso(latest.x, -windowDays);
+    let target = shiftIso(latest.x, -windowDays);
+    if (floorIso && floorIso > target && floorIso < latest.x) target = floorIso;
     let best = null;
     let bestDist = Infinity;
     for (let i = 0; i < smooth.length - 1; i++) {
@@ -325,6 +334,15 @@
       leanGainLb: t.leanGainLb != null ? t.leanGainLb : 20,
       leanMetric: t.leanMetric || "lbm",
       cutStart: t.cutStart || null,
+      goalWeightLb:
+        t.goalWeightLb != null && Number.isFinite(Number(t.goalWeightLb))
+          ? Number(t.goalWeightLb)
+          : null,
+      checkpointWeightLb:
+        t.checkpointWeightLb != null &&
+        Number.isFinite(Number(t.checkpointWeightLb))
+          ? Number(t.checkpointWeightLb)
+          : null,
       whtrTarget:
         t.whtrTarget != null && Number.isFinite(Number(t.whtrTarget))
           ? Number(t.whtrTarget)
@@ -2588,6 +2606,274 @@
     renderWhtrProgress(data, root, t);
   }
 
+  function datedFullScans(scans) {
+    return fullScans(scans)
+      .filter((s) => s && s.date && numericField(s, "weight") != null)
+      .slice()
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  }
+
+  /** Full scans from the same anchor smoothedWindowRate would pick. */
+  function recentScanWindow(scans, windowDays) {
+    const full = datedFullScans(scans);
+    if (full.length < 2) return [];
+    const latest = full[full.length - 1];
+    const target = shiftIso(latest.date, -windowDays);
+    let best = null;
+    let bestDist = Infinity;
+    for (let i = 0; i < full.length - 1; i++) {
+      const dist = Math.abs(daysBetween(target, full[i].date));
+      if (
+        dist < bestDist ||
+        (dist === bestDist && best && full[i].date < best.date)
+      ) {
+        bestDist = dist;
+        best = full[i];
+      }
+    }
+    if (!best) return [];
+    return full.filter((s) => s.date >= best.date);
+  }
+
+  /**
+   * EWMA fit only on this window, so a plateau is not hidden by earlier loss
+   * still inside the 21-day half-life. Same smoother as the chart trend.
+   */
+  function localSmoothedRate(scansInWindow, key) {
+    const pts = (scansInWindow || [])
+      .filter((s) => numericField(s, key) != null)
+      .map((s) => ({ x: s.date, y: numericField(s, key) }));
+    const smooth = ewmaSeries(pts);
+    if (smooth.length < 2) return null;
+    const from = smooth[0];
+    const to = smooth[smooth.length - 1];
+    const days = daysBetween(from.x, to.x);
+    if (!(days > 0)) return null;
+    return {
+      from: from,
+      to: to,
+      days: days,
+      perWeek: ((to.y - from.y) / days) * 7,
+      count: pts.length,
+    };
+  }
+
+  function weightGoals(t) {
+    const out = [];
+    if (t.checkpointWeightLb != null) {
+      out.push({
+        lb: t.checkpointWeightLb,
+        name: fmt.num(t.checkpointWeightLb, 0) + " lb checkpoint",
+      });
+    }
+    if (t.goalWeightLb != null) {
+      out.push({
+        lb: t.goalWeightLb,
+        name: fmt.num(t.goalWeightLb, 0) + " lb goal",
+      });
+    }
+    return out;
+  }
+
+  function projectionClause(rate, goals) {
+    const current = rate.to.y;
+    const losing = rate.perWeek < -PACE_FLAT_LB_PER_WEEK;
+    const rising = rate.perWeek > PACE_FLAT_LB_PER_WEEK;
+    const head =
+      fmt.signed(rate.perWeek, 2) +
+      " lb/week (" +
+      fmt.date(rate.from.x) +
+      " → " +
+      fmt.date(rate.to.x) +
+      ", " +
+      rate.days +
+      " days)";
+    if (!losing) {
+      const open = goals.filter((g) => current - g.lb > 0.05);
+      const reached = goals.filter((g) => current - g.lb <= 0.05);
+      const bits = [];
+      if (open.length) {
+        bits.push(
+          (rising ? "Rising" : "Flat") +
+            " — not closing on " +
+            open.map((g) => g.name).join(" or ") +
+            " at this rate."
+        );
+      }
+      reached.forEach((g) => {
+        bits.push("Already at or under " + g.name + ".");
+      });
+      return head + ". " + bits.join(" ");
+    }
+    const bits = goals.map((g) => {
+      if (current - g.lb <= 0.05) {
+        return "Already at or under " + g.name + ".";
+      }
+      const weeks = Math.max(
+        1,
+        Math.round((current - g.lb) / -rate.perWeek)
+      );
+      const eta = shiftIso(rate.to.x, weeks * 7);
+      return (
+        g.name +
+        " in ~" +
+        weeks +
+        " " +
+        (weeks === 1 ? "week" : "weeks") +
+        " (around " +
+        fmt.date(eta) +
+        ")"
+      );
+    });
+    return head + ": " + bits.join("; ") + ".";
+  }
+
+  function longerPaceLabel(rate, cutStart) {
+    if (cutStart && Math.abs(daysBetween(cutStart, rate.from.x)) <= 14) {
+      if (rate.days >= 70 && rate.days <= 105) return "Since cut (~12 weeks)";
+      return "Since cut";
+    }
+    return "~12 weeks";
+  }
+
+  function stallNote(scans, longerRate) {
+    const windowScans = recentScanWindow(scans, TREND_WINDOW_DAYS);
+    if (windowScans.length < STALL_MIN_SCANS) return null;
+    const weight = localSmoothedRate(windowScans, "weight");
+    const fat = localSmoothedRate(windowScans, "fatMass");
+    if (!weight || !fat) return null;
+    if (weight.count < STALL_MIN_SCANS || fat.count < STALL_MIN_SCANS) return null;
+    if (weight.days < STALL_MIN_DAYS || fat.days < STALL_MIN_DAYS) return null;
+    if (Math.abs(weight.perWeek) >= STALL_LB_PER_WEEK) return null;
+    if (Math.abs(fat.perWeek) >= STALL_LB_PER_WEEK) return null;
+    const lean = localSmoothedRate(windowScans, "lbm");
+    const weeks = Math.max(1, Math.round(weight.days / 7));
+      let text =
+      "Trend flat for " +
+      weeks +
+      " " +
+      (weeks === 1 ? "week" : "weeks") +
+      ". On these scans, smoothed weight is " +
+      fmt.signed(weight.perWeek, 2) +
+      " lb/week and fat mass is " +
+      fmt.signed(fat.perWeek, 2) +
+      " lb/week (" +
+      fmt.date(weight.from.x) +
+      " → " +
+      fmt.date(weight.to.x) +
+      ", " +
+      weight.count +
+      " full scans).";
+    if (longerRate) {
+      text +=
+        " Longer-run smoothed weight is " +
+        fmt.signed(longerRate.perWeek, 2) +
+        " lb/week (" +
+        fmt.date(longerRate.from.x) +
+        " → " +
+        fmt.date(longerRate.to.x) +
+        ").";
+    }
+    if (lean && lean.count >= 2 && lean.perWeek > -STALL_LB_PER_WEEK) {
+      text +=
+        " Lean mass is holding (" +
+        fmt.signed(lean.perWeek, 2) +
+        " lb/week).";
+    } else if (lean && lean.count >= 2) {
+      text +=
+        " Lean mass smoothed rate is " +
+        fmt.signed(lean.perWeek, 2) +
+        " lb/week over the same span.";
+    }
+    return text;
+  }
+
+  function renderGoalPace(data, t, root) {
+    const goals = weightGoals(t);
+    const weightSmooth = smoothPointsFor(data.scans || [], "weight");
+    const recent = smoothedWindowRate(weightSmooth, TREND_WINDOW_DAYS);
+    const longer = smoothedWindowRate(
+      weightSmooth,
+      LONG_TREND_WINDOW_DAYS,
+      t.cutStart
+    );
+    const stall = stallNote(data.scans || [], longer);
+    if (!stall && !(goals.length && (recent || longer))) return null;
+
+    const block = document.createElement("div");
+    block.className = "pace-goal";
+    const summary = [];
+
+    if (stall) {
+      const note = document.createElement("p");
+      note.className = "pace-stall";
+      note.textContent = stall;
+      block.appendChild(note);
+      summary.push(stall);
+    }
+
+    if (goals.length && (recent || longer)) {
+      const heading = document.createElement("h4");
+      heading.textContent = "Goal weight from the smoothed trend";
+      block.appendChild(heading);
+      const levelRate = recent || longer;
+      const kicker = document.createElement("p");
+      kicker.className = "pace-kicker";
+      kicker.textContent =
+        "Estimate from home BIA scans. Smoothed weight " +
+        fmt.num(levelRate.to.y, 1) +
+        " lb on " +
+        fmt.date(levelRate.to.x) +
+        " (dashed line on the weight chart). Dates assume that rate continues, including when recent scans are flat.";
+      block.appendChild(kicker);
+      summary.push(kicker.textContent);
+
+      [
+        { label: "Smoothed series, ~4 weeks", rate: recent },
+        {
+          label: longer ? longerPaceLabel(longer, t.cutStart) : "",
+          rate: longer,
+        },
+      ].forEach((row) => {
+        if (!row.rate) return;
+        const p = document.createElement("p");
+        p.className = "pace-row";
+        const label = document.createElement("strong");
+        label.textContent = row.label;
+        const detail = document.createElement("span");
+        detail.className = "pace-detail";
+        detail.textContent = projectionClause(row.rate, goals);
+        p.appendChild(label);
+        p.appendChild(detail);
+        block.appendChild(p);
+        summary.push(row.label + ": " + detail.textContent);
+      });
+    } else if (goals.length) {
+      const p = document.createElement("p");
+      p.textContent =
+        "Not enough full scans for a smoothed weight trend. Partial scans are skipped.";
+      block.appendChild(p);
+      summary.push(p.textContent);
+    }
+
+    root.appendChild(block);
+    return summary.join(" ");
+  }
+
+  function setPaceSummary(text) {
+    let el = document.getElementById("paceSummary");
+    const panel = document.getElementById("pacePanel");
+    const content = document.getElementById("paceContent");
+    if (!el && panel && content) {
+      el = document.createElement("p");
+      el.id = "paceSummary";
+      el.className = "sr-only";
+      panel.insertBefore(el, content);
+    }
+    if (!el) return;
+    el.textContent = text || "";
+  }
+
   function renderPace(data) {
     const root = document.getElementById("paceContent");
     if (!root) return;
@@ -2595,10 +2881,17 @@
     const baseline = findScan(data.scans, BASELINE_ID);
     const latest = latestFullScan(data.scans);
     root.innerHTML = "";
+    const summaryBits = [];
+
+    const goalSummary = renderGoalPace(data, t, root);
+    if (goalSummary) summaryBits.push(goalSummary);
 
     if (!baseline || !latest || baseline.id === latest.id) {
-      root.innerHTML =
-        "<p>Need Feb baseline and a later comparable full scan to estimate pace.</p>";
+      if (!root.childElementCount) {
+        root.innerHTML =
+          "<p>Need Feb baseline and a later comparable full scan to estimate pace.</p>";
+      }
+      setPaceSummary(summaryBits.join(" "));
       return;
     }
 
@@ -2669,6 +2962,7 @@
         )} → ${fmt.date(latest.date)})</span>`;
       root.appendChild(row);
     }
+    setPaceSummary(summaryBits.join(" "));
   }
 
   function renderComposition(data) {

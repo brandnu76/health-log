@@ -114,6 +114,34 @@
 .progress-item h4 { margin: 0 0 0.35rem; font-size: 0.85rem; font-weight: 600; }
 .pace-row { display: flex; flex-direction: column; gap: 0.2rem; }
 .pace-row strong { color: var(--text); font-weight: 600; }
+.pace-goal { display: flex; flex-direction: column; gap: 0.55rem; }
+.pace-goal h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--text);
+}
+.pace-goal .pace-kicker {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-subtle);
+}
+.pace-goal .pace-detail {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.pace-stall {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-elevated) 72%, transparent);
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
 
 .trends-controls {
   display: flex;
