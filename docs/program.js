@@ -52,7 +52,7 @@
     scans.forEach(function (s) {
       if (!s || typeof s !== "object" || typeof s.date !== "string" || !DATE_RE.test(s.date)) return;
       if (num(s.weight) === null) return;
-      if (!best || s.date > best.date) best = { date: s.date, weightLb: s.weight };
+      if (!best || s.date > best.date) best = { date: s.date, weightLb: s.weight, device: s.device || "fitdays" };
     });
     return best;
   }
@@ -74,7 +74,7 @@
     if (latestClinic && (!scan || latestClinic.date >= scan.date)) {
       current = { date: latestClinic.date, weightLb: latestClinic.weightLb, source: "VA clinic" };
     } else if (scan) {
-      current = { date: scan.date, weightLb: scan.weightLb, source: "Fitdays (home)" };
+      current = { date: scan.date, weightLb: scan.weightLb, source: homeSource(scan.device) };
     }
     return {
       name: typeof p.name === "string" && p.name.trim() ? p.name.trim() : "Program",
@@ -87,6 +87,12 @@
       goal: num(targets.goalWeightLb),
       checkpoint: num(targets.checkpointWeightLb)
     };
+  }
+
+  function homeSource(deviceId) {
+    if (deviceId === "segmental") return "Segmental scale (home)";
+    if (deviceId === "fitdays") return "Fitdays+ (home)";
+    return "Home scale";
   }
 
   function clampPct(v) { return Math.max(0, Math.min(100, v)); }
@@ -190,7 +196,7 @@
       if (bar) card.appendChild(bar);
     }
     card.appendChild(el("p", "chart-band-note",
-      "Clinic and home scales differ \u2014 compare each to itself. Clinic weigh-ins are not added to the Fitdays scan series."));
+      "Clinic and home scales differ \u2014 compare each to itself. Clinic weigh-ins are not added to the home scan series. Fitdays+ and the segmental scale are not mixed into one composition trend."));
     section.appendChild(card);
     return section;
   }
