@@ -2,6 +2,13 @@
 
 Newest entry at the top.
 
+## 2026-11-06
+
+- Switched body-composition scales. Fitdays+ (foot-only BIA, `device: "fitdays"`) ends with the 2026-11-01 scan, 28 scans in `docs/data.json`. The new scale is segmental BIA (`device: "segmental"`); the brand was not on the screen.
+- The 2026-11-05 22:33 reading was an evening test and is not a scan. The first official reading is the Saturday 2026-11-07 morning scan.
+- The two devices disagree by a wide margin, so composition trends, deltas, loss quality, the lean floor, smoothed rates, the stall check, and goal pace stay on one device. Weight and waist stay continuous, marked at 2026-11-06.
+- Dashboard opens on the segmental scale. Until that scale has enough morning scans, those cards say they are not computed. Fitdays+ history is the earlier series on the scale toggle.
+
 ## 2026-11-01
 
 - Weight 200.2, BF 33.2%, fat 66.4, visceral 16.2, LBM 133.8, muscle mass 125.2 (10:48 Sunday weigh-in, replacing Saturday because of travel)

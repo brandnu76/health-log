@@ -7,6 +7,7 @@
 
   const THEME_KEY = "health-log-theme";
   const RANGE_KEY = "health-log-range";
+  const DEVICE_KEY = "health-log-device";
   const BASELINE_ID = "2026-02-01";
   // Avoirdupois pound and international inch. FFMI/FMI are BIA trends, not DEXA.
   const LB_TO_KG = 0.45359237;
@@ -32,6 +33,161 @@
   let compositionChart = null;
   let appData = null;
   let chartRange = "all";
+  let deviceViewId = null;
+
+  function deviceCatalog(data) {
+    const raw =
+      data && data.meta && Array.isArray(data.meta.devices) ? data.meta.devices : [];
+    return raw.filter((d) => d && d.id);
+  }
+
+  function currentDevice(data) {
+    const list = deviceCatalog(data);
+    const marked = list.find((d) => d.current);
+    if (marked) return marked;
+    const scans = (data && data.scans) || [];
+    for (let i = scans.length - 1; i >= 0; i--) {
+      const id = scans[i] && scans[i].device;
+      if (id) return list.find((d) => d.id === id) || { id: id, label: id };
+    }
+    return list[0] || { id: "fitdays", label: "Fitdays+" };
+  }
+
+  function deviceById(data, id) {
+    const found = deviceCatalog(data).find((d) => d.id === id);
+    if (found) return found;
+    if (id === "fitdays") return { id: "fitdays", label: "Fitdays+" };
+    return { id: id || "fitdays", label: id || "Fitdays+" };
+  }
+
+  function viewDevice(data) {
+    if (deviceViewId) {
+      const found = deviceCatalog(data).find((d) => d.id === deviceViewId);
+      if (found) return found;
+    }
+    return currentDevice(data);
+  }
+
+  function orderedDevices(data) {
+    const cur = currentDevice(data);
+    return deviceCatalog(data)
+      .slice()
+      .sort((a, b) => {
+        if (a.id === cur.id) return -1;
+        if (b.id === cur.id) return 1;
+        const af = a.from || a.through || "";
+        const bf = b.from || b.through || "";
+        return af < bf ? -1 : af > bf ? 1 : 0;
+      });
+  }
+
+  function deviceButtonLabel(data, device) {
+    const name = device.label || device.id;
+    if (device.id === currentDevice(data).id) return name;
+    return name + " (earlier)";
+  }
+
+  function scanDeviceId(scan) {
+    return (scan && scan.device) || "fitdays";
+  }
+
+  function scansOnDevice(scans, deviceId) {
+    return (scans || []).filter((s) => scanDeviceId(s) === deviceId);
+  }
+
+  function switchDate(data) {
+    const cur = currentDevice(data);
+    if (cur && cur.from) return cur.from;
+    const dated = deviceCatalog(data)
+      .map((d) => d.from)
+      .filter(Boolean)
+      .sort();
+    return dated.length ? dated[dated.length - 1] : null;
+  }
+
+  function deviceBaseline(scans, device) {
+    const list = scans || [];
+    if (!list.length) return null;
+    if (device && device.id === "fitdays") {
+      const feb = findScan(list, BASELINE_ID);
+      if (feb) return feb;
+    }
+    const full = fullScans(list);
+    return full.length ? full[0] : list[0];
+  }
+
+  function deviceGapMessage(device, count, minimum, subject) {
+    const label = (device && device.label) || "This scale";
+    const n = count == null ? 0 : count;
+    let lead;
+    if (n <= 0) {
+      lead = label + " has no official scan yet";
+      if (device && device.firstOfficial) {
+        lead += ". The first morning reading is " + fmt.date(device.firstOfficial);
+      }
+      lead += ".";
+    } else {
+      lead =
+        label + " has " + n + " full scan" + (n === 1 ? "" : "s") + ".";
+    }
+    const scansWord = minimum === 1 ? "full scan" : "full scans";
+    return (
+      lead +
+      " " +
+      subject +
+      " is not computed until this scale has at least " +
+      minimum +
+      " " +
+      scansWord +
+      ". Fitdays+ stays a separate earlier series and is not mixed in."
+    );
+  }
+
+  function deviceBanner(data) {
+    const device = viewDevice(data);
+    const cur = currentDevice(data);
+    const scans = scansOnDevice(data.scans || [], device.id);
+    const full = fullScans(scans).length;
+    if (device.id === cur.id && full === 0) {
+      const when = device.firstOfficial
+        ? fmt.date(device.firstOfficial)
+        : "the next morning scan";
+      const switched = cur.from ? fmt.date(cur.from) : "the switch date";
+      return (
+        "Showing " +
+        device.label +
+        ". It has no official scan yet (first morning reading " +
+        when +
+        "). Composition charts, what moved, loss quality, the lean floor, smoothed trends, the stall check, and goal pace are not computed. Weight and waist still include the earlier scale, with a marker on " +
+        switched +
+        ". The Nov 5, 2026 22:33 reading was an evening test and is not logged."
+      );
+    }
+    if (device.id !== cur.id) {
+      const through = device.through ? " through " + fmt.date(device.through) : "";
+      return (
+        "Showing " +
+        device.label +
+        " only (" +
+        scans.length +
+        " scan" +
+        (scans.length === 1 ? "" : "s") +
+        through +
+        "). These figures stay on this scale. They are not continued onto " +
+        (cur.label || "the current scale") +
+        "."
+      );
+    }
+    return (
+      "Showing " +
+      device.label +
+      " · " +
+      full +
+      " full scan" +
+      (full === 1 ? "" : "s") +
+      ". Composition figures use this scale only."
+    );
+  }
 
   const fmt = {
     num(n, digits = 1) {
@@ -117,8 +273,9 @@
   }
 
   function latestFullScan(scans) {
-    const full = scans.filter((s) => !s.partial && s.weight != null);
-    return full[full.length - 1] || scans[scans.length - 1];
+    const list = scans || [];
+    const full = list.filter((s) => !s.partial && s.weight != null);
+    return full.length ? full[full.length - 1] : list[list.length - 1] || null;
   }
 
   /** Delta vs Feb baseline; lower is better for weight/bf/fat/visceral/bodyAge */
@@ -159,6 +316,7 @@
   }
 
   function previousFullScan(scans, latest) {
+    if (!latest) return null;
     const full = fullScans(scans);
     const idx = full.findIndex((s) => s.id === latest.id);
     if (idx > 0) return full[idx - 1];
@@ -239,8 +397,8 @@
   function smoothPointsFor(scans, key) {
     return ewmaSeries(
       (scans || [])
-        .filter((s) => !s.partial && numericField(s, key) != null)
-        .map((s) => ({ x: s.date, y: numericField(s, key) }))
+        .filter((s) => !s.partial && metricValue(s, key) != null)
+        .map((s) => ({ x: s.date, y: metricValue(s, key) }))
     );
   }
 
@@ -368,8 +526,9 @@
   }
 
   function ffmiOf(scan, heightIn) {
-    if (!scan || scan.lbm == null) return null;
-    return kgPerM2(scan.lbm, heightIn);
+    const lean = leanLb(scan);
+    if (lean == null) return null;
+    return kgPerM2(lean, heightIn);
   }
 
   function fmiOf(scan, heightIn) {
@@ -422,6 +581,18 @@
       return null;
     }
     return Number(scan[key]);
+  }
+
+  /** Lean body mass. Fitdays stores it as lbm. The segmental scale's fat-free mass counts when lbm is absent. */
+  function leanLb(scan) {
+    const lbm = numericField(scan, "lbm");
+    if (lbm != null) return lbm;
+    return numericField(scan, "fatFreeMass");
+  }
+
+  function metricValue(scan, metric) {
+    if (metric === "lbm") return leanLb(scan);
+    return numericField(scan, metric);
   }
 
   function waistScans(scans) {
@@ -515,11 +686,14 @@
       digits: 1,
       eps: 0.05,
     });
+    const baseWord = spec.baselineLabel || "vs Feb";
     const febLine = dFeb
-      ? '<span class="delta ' + dFeb.tone + '">' + dFeb.text + " vs Feb</span>"
+      ? '<span class="delta ' + dFeb.tone + '">' + dFeb.text + " " + baseWord + "</span>"
       : '<span class="delta neutral" title="' +
         escapeHtml(spec.febTitle || "") +
-        '">Δ vs Feb n/a</span>';
+        '">Δ ' +
+        baseWord +
+        " n/a</span>";
     let prevLine = "";
     if (spec.hasPrev) {
       prevLine = dPrev
@@ -543,13 +717,17 @@
   }
 
   function renderBodyCompCards(data, root) {
-    const scans = data.scans || [];
+    const all = data.scans || [];
+    const device = viewDevice(data);
+    const scans = scansOnDevice(all, device.id);
     const height = subjectHeightIn(data);
     const t = getTargets(data);
-    const baseline = findScan(scans, BASELINE_ID);
+    const baseline = deviceBaseline(scans, device);
     const latestFull = latestFullScan(scans);
     const prevFull = latestFull ? previousFullScan(scans, latestFull) : null;
-    const waists = waistScans(scans);
+    const baselineLabel =
+      baseline && baseline.id === BASELINE_ID ? "vs Feb" : "vs first on this scale";
+    const waists = waistScans(all);
     const latestWaist = latestScan(waists);
     const priorWaist = priorScan(waists, latestWaist);
     const targetWaist =
@@ -646,39 +824,50 @@
 
     appendRfmCard(root, data, latestWaist);
 
+    const indexMissing = (kind, absent) => {
+      if (height == null) return "Height not logged";
+      if (!latestFull) return "No official scan on this scale yet";
+      if (absent) return "No " + kind + " on the latest full scan";
+      return "Not measured";
+    };
     appendIndexCard(root, {
       label: "FFMI",
       title:
-        "Scan LBM in kg divided by height in m². Fitdays+ BIA trend, not a DEXA result.",
+        "Scan LBM in kg divided by height in m². " +
+        (device.label || "Scale") +
+        " BIA trend, not a DEXA result.",
       value: ffmiOf(latestFull, height),
       feb: ffmiOf(baseline, height),
       prev: ffmiOf(prevFull, height),
       hasPrev: !!prevFull,
       lowerBetter: false,
-      missing:
-        height == null
-          ? "Height not logged"
-          : !latestFull || latestFull.lbm == null
-            ? "No LBM on the latest full scan"
-            : "Not measured",
-      febTitle: "Feb baseline has no LBM, so FFMI is not compared to it.",
+      baselineLabel: baselineLabel,
+      missing: indexMissing("LBM", !latestFull || leanLb(latestFull) == null),
+      febTitle:
+        baseline && baseline.id === BASELINE_ID
+          ? "Feb baseline has no LBM, so FFMI is not compared to it."
+          : "No earlier LBM on this scale, so FFMI is not compared.",
     });
     appendIndexCard(root, {
       label: "FMI",
       title:
-        "Scan fat mass in kg divided by height in m². Fitdays+ BIA trend, not a DEXA result.",
+        "Scan fat mass in kg divided by height in m². " +
+        (device.label || "Scale") +
+        " BIA trend, not a DEXA result.",
       value: fmiOf(latestFull, height),
       feb: fmiOf(baseline, height),
       prev: fmiOf(prevFull, height),
       hasPrev: !!prevFull,
       lowerBetter: true,
-      missing:
-        height == null
-          ? "Height not logged"
-          : !latestFull || latestFull.fatMass == null
-            ? "No fat mass on the latest full scan"
-            : "Not measured",
-      febTitle: "Feb baseline has no fat mass, so FMI is not compared to it.",
+      baselineLabel: baselineLabel,
+      missing: indexMissing(
+        "fat mass",
+        !latestFull || latestFull.fatMass == null
+      ),
+      febTitle:
+        baseline && baseline.id === BASELINE_ID
+          ? "Feb baseline has no fat mass, so FMI is not compared to it."
+          : "No earlier fat mass on this scale, so FMI is not compared.",
     });
   }
 
@@ -715,12 +904,20 @@
     let deltaHtml =
       '<span class="delta neutral">Tape estimate · not DEXA · not BIA</span>';
     const bia = numericField(latestWaist, "bf");
-    if (bia != null) {
+    const sameScale = scanDeviceId(latestWaist) === viewDevice(data).id;
+    if (bia != null && sameScale) {
       deltaHtml =
         '<span class="delta neutral">' +
         fmt.signed(rfm - bia, 1) +
         " vs BIA BF%</span>" +
         '<span class="delta secondary neutral">Tape estimate · not DEXA · not BIA</span>';
+    } else if (bia != null) {
+      const src = deviceById(data, scanDeviceId(latestWaist));
+      deltaHtml =
+        '<span class="delta neutral">Tape estimate · not DEXA · not BIA</span>' +
+        '<span class="delta secondary neutral">BIA on this waist date is ' +
+        escapeHtml(src.label || "another scale") +
+        " and is not compared</span>";
     }
     appendMetricCard(root, {
       label: "RFM",
@@ -897,14 +1094,14 @@
 
   function leanFloorScan(scans, t) {
     const metric = t.leanMetric || "lbm";
-    let pool = fullScans(scans).filter((s) => s[metric] != null);
+    let pool = fullScans(scans).filter((s) => metricValue(s, metric) != null);
     if (t.cutStart) {
       const cutPool = pool.filter((s) => s.date >= t.cutStart);
       if (cutPool.length) pool = cutPool;
     }
-    if (!pool.length) return null;
+    if (pool.length < 2) return null;
     return pool.reduce((best, s) =>
-      best == null || s[metric] < best[metric] ? s : best
+      best == null || metricValue(s, metric) < metricValue(best, metric) ? s : best
     );
   }
 
@@ -964,37 +1161,121 @@
     },
   };
 
+  const SEGMENT_ROWS = [
+    ["Left arm", "leftArmMuscle", "leftArmFat", "leftArmMusclePct", "leftArmFatPct"],
+    ["Right arm", "rightArmMuscle", "rightArmFat", "rightArmMusclePct", "rightArmFatPct"],
+    ["Left leg", "leftLegMuscle", "leftLegFat", "leftLegMusclePct", "leftLegFatPct"],
+    ["Right leg", "rightLegMuscle", "rightLegFat", "rightLegMusclePct", "rightLegFatPct"],
+    ["Trunk", "trunkMuscle", "trunkFat", "trunkMusclePct", "trunkFatPct"],
+  ];
+
+  function appendEmptyMetric(root, label, reason) {
+    appendMetricCard(root, {
+      label: label,
+      empty: true,
+      valueHtml: "No scan yet",
+      deltaHtml:
+        '<span class="delta neutral">' + escapeHtml(reason) + "</span>",
+    });
+  }
+
+  function renderSegmental(scan) {
+    const root = document.getElementById("segmentalMetrics");
+    if (!root) return;
+    const parts = [];
+    SEGMENT_ROWS.forEach((row) => {
+      const muscle = numericField(scan, row[1]);
+      const fat = numericField(scan, row[2]);
+      const musclePct = numericField(scan, row[3]);
+      const fatPct = numericField(scan, row[4]);
+      if (muscle == null && fat == null && musclePct == null && fatPct == null) {
+        return;
+      }
+      const bits = [];
+      if (muscle != null) bits.push("Muscle " + fmt.num(muscle, 1) + " lb");
+      if (fat != null) bits.push("Fat " + fmt.num(fat, 1) + " lb");
+      if (musclePct != null) bits.push("Muscle " + fmt.num(musclePct, 1) + "%");
+      if (fatPct != null) bits.push("Fat " + fmt.num(fatPct, 1) + "%");
+      parts.push(
+        '<div class="extra-item"><span class="elabel">' +
+          escapeHtml(row[0]) +
+          '</span><span class="eval">' +
+          escapeHtml(bits.join(" · ")) +
+          "</span></div>"
+      );
+    });
+    if (!scan || !parts.length) {
+      root.hidden = true;
+      root.innerHTML = "";
+      return;
+    }
+    root.hidden = false;
+    root.innerHTML =
+      "<h3>Segmental muscle and fat</h3>" +
+      '<p class="chart-band-note">This scale only. Logged pounds and percents. Not compared with Fitdays+.</p>' +
+      '<div class="segmental-grid">' +
+      parts.join("") +
+      "</div>";
+  }
+
+  function renderFallbackWeight(root, data, device) {
+    const fallback = latestFullScan(data.scans || []);
+    if (!fallback || numericField(fallback, "weight") == null) {
+      appendEmptyMetric(root, "Weight", "No weight logged.");
+      return;
+    }
+    const src = deviceById(data, scanDeviceId(fallback));
+    appendMetricCard(root, {
+      label: "Weight",
+      title:
+        "Last logged weight. It is not a reading from " +
+        (device.label || "this scale") +
+        ".",
+      valueHtml: fmt.num(fallback.weight, 1) + '<span class="unit">lb</span>',
+      deltaHtml:
+        '<span class="delta neutral">' +
+        escapeHtml(src.label || "Earlier scale") +
+        " · " +
+        fmt.date(fallback.date) +
+        "</span>" +
+        '<span class="delta secondary neutral">No delta across scales</span>',
+    });
+  }
+
   function renderMetrics(data) {
-    const scans = data.scans;
-    const baseline = findScan(scans, BASELINE_ID);
+    const device = viewDevice(data);
+    const scans = scansOnDevice(data.scans || [], device.id);
+    const baseline = deviceBaseline(scans, device);
     const latest = latestFullScan(scans);
     const metaEl = document.getElementById("latestMeta");
     const prev = previousFullScan(scans, latest);
     const latestClock = parseClock(latest && latest.scanTime);
-    metaEl.textContent =
-      fmt.date(latest.date) +
-      (latestClock ? " · " + latestClock.text : "") +
-      " · " +
-      (latest.label || "Scan") +
-      " · vs Feb & prior full";
+    const baseWord =
+      baseline && baseline.id === BASELINE_ID ? "vs Feb" : "vs first on this scale";
+    if (!latest) {
+      metaEl.textContent = (device.label || "Current scale") + " · no official scan yet";
+    } else {
+      metaEl.textContent =
+        fmt.date(latest.date) +
+        (latestClock ? " · " + latestClock.text : "") +
+        " · " +
+        (latest.label || "Scan") +
+        " · " +
+        (device.label || "") +
+        " · " +
+        baseWord +
+        " & prior full";
+    }
     renderScanTimeNote(data, latest);
 
-    const cards = [
-      {
-        key: "weight",
-        label: "Weight",
-        unit: "lb",
-        digits: 1,
-        lowerBetter: true,
-        band: null,
-      },
+    const composition = [
       {
         key: "bf",
         label: "Body fat",
         unit: "%",
         digits: 1,
         lowerBetter: true,
-        band: bfBand(latest.bf),
+        band: latest ? bfBand(latest.bf) : null,
       },
       {
         key: "fatMass",
@@ -1010,7 +1291,7 @@
         unit: "",
         digits: 1,
         lowerBetter: true,
-        band: visceralBand(latest.visceral),
+        band: latest ? visceralBand(latest.visceral) : null,
       },
       {
         key: "bodyAge",
@@ -1034,9 +1315,6 @@
         unit: "lb",
         digits: 1,
         lowerBetter: false,
-        skipDelta: true,
-        reason:
-          "No delta vs Feb — baseline muscle label uncertain",
         band: null,
       },
     ];
@@ -1044,39 +1322,78 @@
     const root = document.getElementById("metricCards");
     root.innerHTML = "";
 
+    const cards = [];
+    if (latest && numericField(latest, "weight") != null) {
+      cards.push({
+        key: "weight",
+        label: "Weight",
+        unit: "lb",
+        digits: 1,
+        lowerBetter: true,
+        band: null,
+      });
+    } else {
+      renderFallbackWeight(root, data, device);
+    }
+    if (!latest) {
+      composition.forEach((c) => {
+        appendEmptyMetric(root, c.label, "No official scan on this scale yet.");
+      });
+    } else {
+      composition.forEach((c) => cards.push(c));
+    }
+
     cards.forEach((c) => {
       const el = document.createElement("article");
       el.className = "card card-pad metric-card";
       el.setAttribute("role", "listitem");
       if (c.band) el.classList.add("band-" + c.band);
 
+      const raw = c.key === "lbm" ? leanLb(latest) : numericField(latest, c.key);
       const val =
-        c.digits === 0 ? fmt.int(latest[c.key]) : fmt.num(latest[c.key], c.digits);
+        raw == null ? "—" : c.digits === 0 ? fmt.int(raw) : fmt.num(raw, c.digits);
+      const uncertainBaseline =
+        c.key === "muscleMass" &&
+        baseline &&
+        (baseline.labelUncertain || baseline.muscleMassApprox);
 
       let deltaHtml = "";
-      if (c.skipDelta) {
+      if (uncertainBaseline) {
         deltaHtml = `<div class="delta-stack"><span class="delta neutral" title="${escapeHtml(
-          c.reason || ""
-        )}">${c.reason ? "Δ vs Feb n/a" : "—"}</span></div>`;
+          "No delta vs Feb — baseline muscle label uncertain"
+        )}">Δ vs Feb n/a</span></div>`;
       } else {
-        const dFeb = deltaVsBaseline(latest, baseline, c.key, {
-          lowerBetter: c.lowerBetter,
-        });
+        const dFeb =
+          c.key === "lbm"
+            ? deltaInfo(leanLb(latest), baseline ? leanLb(baseline) : null, {
+                lowerBetter: c.lowerBetter,
+              })
+            : deltaVsBaseline(latest, baseline, c.key, {
+                lowerBetter: c.lowerBetter,
+              });
         const dPrev = prev
-          ? deltaVsBaseline(latest, prev, c.key, {
-              lowerBetter: c.lowerBetter,
-            })
+          ? c.key === "lbm"
+            ? deltaInfo(leanLb(latest), leanLb(prev), { lowerBetter: c.lowerBetter })
+            : deltaVsBaseline(latest, prev, c.key, {
+                lowerBetter: c.lowerBetter,
+              })
           : null;
-        const febMissing = baseline == null || baseline[c.key] == null;
+        const baseMissing =
+          baseline == null ||
+          (c.key === "lbm" ? leanLb(baseline) == null : baseline[c.key] == null);
         const febLine = dFeb
-          ? `<span class="delta ${dFeb.tone}">${dFeb.text} vs Feb</span>`
+          ? `<span class="delta ${dFeb.tone}">${dFeb.text} ${baseWord}</span>`
           : `<span class="delta neutral">${
-              febMissing ? "Δ vs Feb n/a" : "— vs Feb"
+              baseMissing ? "Δ " + baseWord + " n/a" : "— " + baseWord
             }</span>`;
         let prevLine = "";
         if (prev && prev.id !== latest.id) {
           if (baseline && prev.id === baseline.id) {
-            prevLine = `<span class="delta secondary neutral">prior full = Feb</span>`;
+            prevLine = `<span class="delta secondary neutral">${
+              baseline.id === BASELINE_ID
+                ? "prior full = Feb"
+                : "prior full = first on this scale"
+            }</span>`;
           } else if (dPrev) {
             prevLine = `<span class="delta secondary ${dPrev.tone}">${dPrev.text} vs prior full</span>`;
           } else {
@@ -1110,12 +1427,21 @@
       { key: "bone", label: "Bone", unit: "lb" },
       { key: "bmr", label: "BMR", unit: "kcal", digits: 0 },
       { key: "bmi", label: "BMI", unit: "" },
+      { key: "fatFreeMass", label: "Fat-free mass", unit: "lb" },
+      { key: "skeletalMuscleMass", label: "Skeletal muscle mass", unit: "lb" },
+      { key: "bodyCellMass", label: "Body cell mass", unit: "lb" },
+      { key: "minerals", label: "Minerals", unit: "lb" },
+      { key: "intracellularWater", label: "Intracellular water", unit: "lb" },
+      { key: "extracellularWater", label: "Extracellular water", unit: "lb" },
+      { key: "intracellularWaterPct", label: "Intracellular water", unit: "%" },
+      { key: "extracellularWaterPct", label: "Extracellular water", unit: "%" },
+      { key: "heartRate", label: "Scale heart rate", unit: "bpm", digits: 0 },
     ];
 
     const extraRoot = document.getElementById("extraMetrics");
     extraRoot.innerHTML = "";
     extras.forEach((e) => {
-      if (latest[e.key] == null) return;
+      if (!latest || latest[e.key] == null) return;
       const dig = e.digits != null ? e.digits : 1;
       const v =
         dig === 0 ? fmt.int(latest[e.key]) : fmt.num(latest[e.key], dig);
@@ -1128,14 +1454,105 @@
       extraRoot.appendChild(item);
     });
 
+    renderSegmental(latest);
     renderWhatMoved(data);
     renderLossQuality(data);
   }
 
   function seriesFor(scans, key) {
-    return scans
-      .filter((s) => s[key] != null)
-      .map((s) => ({ x: s.date, y: s[key], label: s.label }));
+    return (scans || [])
+      .filter((s) => metricValue(s, key) != null)
+      .map((s) => ({
+        x: s.date,
+        y: metricValue(s, key),
+        label: s.label,
+        device: scanDeviceId(s),
+      }));
+  }
+
+  function markerPixel(scale, labels, iso, area) {
+    if (!scale || !area || !labels || !labels.length || !iso) return null;
+    for (let i = 0; i < labels.length; i++) {
+      if (labels[i] === iso) return scale.getPixelForValue(i);
+    }
+    let prev = -1;
+    let next = -1;
+    for (let i = 0; i < labels.length; i++) {
+      if (labels[i] < iso) prev = i;
+      else {
+        next = i;
+        break;
+      }
+    }
+    if (prev < 0 && next >= 0) {
+      if (daysBetween(iso, labels[next]) > 21) return null;
+      return scale.getPixelForValue(next);
+    }
+    if (prev >= 0 && next < 0) {
+      const last = scale.getPixelForValue(prev);
+      const prevPx = prev > 0 ? scale.getPixelForValue(prev - 1) : last - 28;
+      const step = Math.max(16, last - prevPx);
+      return Math.min(area.right - 8, last + step * 0.45);
+    }
+    if (prev < 0 || next < 0) return null;
+    const span = daysBetween(labels[prev], labels[next]);
+    const t = span > 0 ? daysBetween(labels[prev], iso) / span : 0;
+    const p0 = scale.getPixelForValue(prev);
+    const p1 = scale.getPixelForValue(next);
+    return p0 + (p1 - p0) * t;
+  }
+
+  const deviceSwitchPlugin = {
+    id: "deviceSwitch",
+    afterDraw(chart) {
+      const cfg = chart.options.plugins && chart.options.plugins.deviceSwitch;
+      if (!cfg || !cfg.date) return;
+      const labels = chart.data.labels || [];
+      const xScale = chart.scales.x;
+      const area = chart.chartArea;
+      if (!xScale || !area || !labels.length) return;
+      const px = markerPixel(xScale, labels, cfg.date, area);
+      if (px == null || px < area.left || px > area.right) return;
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.beginPath();
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = cfg.color || "#fbbf24";
+      ctx.lineWidth = 1.25;
+      ctx.moveTo(px, area.top);
+      ctx.lineTo(px, area.bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = "600 10px Inter, system-ui, sans-serif";
+      ctx.fillStyle = cfg.color || "#fbbf24";
+      const text = cfg.label || "Scale switch";
+      const nearRight = area.right - px < 72;
+      ctx.textAlign = nearRight ? "right" : "left";
+      ctx.fillText(text, nearRight ? px - 4 : px + 4, area.top + 11);
+      ctx.restore();
+    },
+  };
+
+  function setChartEmpty(canvasId, message) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const wrap = canvas.closest(".chart-wrap") || canvas.parentElement;
+    let note = document.getElementById(canvasId + "-empty");
+    if (!message) {
+      canvas.hidden = false;
+      if (wrap) wrap.classList.remove("is-empty");
+      if (note) note.remove();
+      return;
+    }
+    canvas.hidden = true;
+    if (wrap) wrap.classList.add("is-empty");
+    if (!note && wrap) {
+      note = document.createElement("p");
+      note.id = canvasId + "-empty";
+      note.className = "chart-empty";
+      wrap.appendChild(note);
+    }
+    if (note) note.textContent = message;
   }
 
   function makeLineChart(canvasId, points, yLabel, refCfg, extra) {
@@ -1226,8 +1643,23 @@
         })),
       };
     }
+    const marker = extra && extra.marker;
+    if (marker && marker.date) {
+      pluginsOpt.deviceSwitch = {
+        date: marker.date,
+        label: marker.label || "Scale switch",
+        color: colors.caution,
+      };
+    }
 
     const pointBorder = cssVar("--bg") || "#0f1419";
+    const colorByDevice = extra && extra.colorByDevice;
+    const pointRoles = colorByDevice
+      ? points.map((p) => (p.device && p.device !== "fitdays" ? "caution" : "accent"))
+      : null;
+    const pointColors = pointRoles
+      ? pointRoles.map((role) => seriesColor(role, colors))
+      : colors.accent;
     const datasets = [
       {
         label: yLabel,
@@ -1239,11 +1671,12 @@
         fill: true,
         pointRadius: values.length === 1 ? 6 : 5,
         pointHoverRadius: 7,
-        pointBackgroundColor: colors.accent,
+        pointBackgroundColor: pointColors,
         pointBorderColor: pointBorder,
         pointBorderWidth: 2,
       },
     ];
+    if (pointRoles) datasets[0].$pointRoles = pointRoles;
     if (smoothValues) {
       const smoothColor = seriesColor("smooth", colors);
       datasets.push({
@@ -1303,7 +1736,10 @@
           },
         },
       },
-      plugins: refCfg ? [refBandPlugin] : [],
+      plugins: [refBandPlugin, deviceSwitchPlugin].filter((plugin) => {
+        if (plugin === refBandPlugin) return !!refCfg;
+        return !!(marker && marker.date);
+      }),
     });
     chart.$colorRoles = smoothValues ? ["accent", "smooth"] : ["accent"];
     charts.push(chart);
@@ -1334,10 +1770,10 @@
   function makeFatLbmChart(scans) {
     const canvas = document.getElementById("chartFatLbm");
     if (!canvas || typeof Chart === "undefined") return null;
-    const rows = scans.filter((s) => s.fatMass != null || s.lbm != null);
+    const rows = (scans || []).filter((s) => s.fatMass != null || leanLb(s) != null);
     const labels = rows.map((s) => s.date);
     const fat = rows.map((s) => (s.fatMass == null ? null : s.fatMass));
-    const lbm = rows.map((s) => (s.lbm == null ? null : s.lbm));
+    const lbm = rows.map((s) => leanLb(s));
     const colors = chartColors();
     const fatColor = seriesColor("fat", colors);
     const leanColor = seriesColor("lean", colors);
@@ -1616,8 +2052,14 @@
         const role = roles[i] || "accent";
         const color = seriesColor(role, colors);
         ds.borderColor = color;
-        ds.pointBackgroundColor = color;
         ds.pointBorderColor = pointBorder;
+        if (ds.$pointRoles) {
+          ds.pointBackgroundColor = ds.$pointRoles.map((pointRole) =>
+            seriesColor(pointRole, colors)
+          );
+        } else {
+          ds.pointBackgroundColor = color;
+        }
         if (role === "smooth") {
           ds.backgroundColor = "transparent";
           ds.borderDash = [5, 4];
@@ -1672,67 +2114,89 @@
 
     const t = getTargets(data);
     const colors = chartColors();
-    const ranged = scansInRange(data.scans, chartRange);
+    const device = viewDevice(data);
+    const scopedAll = scansOnDevice(data.scans || [], device.id);
+    const ranged = scansInRange(data.scans || [], chartRange);
+    const scoped = scansInRange(scopedAll, chartRange);
+    const fullN = fullScans(scopedAll).length;
+    const switchOn = switchDate(data);
+    const marker = switchOn ? { date: switchOn, label: "New scale" } : null;
+    const gap = (subject) => deviceGapMessage(device, fullN, 2, subject);
+    const smoothTrend = (key) => {
+      if (fullN < 2) return gap("A smoothed trend");
+      return trendRateNoteFrom(smoothPointsFor(scopedAll, key));
+    };
 
-    const weightSmooth = smoothPointsFor(data.scans, "weight");
-    const weightTrend = trendRateNoteFrom(weightSmooth);
-    makeLineChart(
-      "chartWeight",
-      seriesFor(ranged, "weight"),
-      "Weight (lb)",
-      null,
-      { smooth: weightSmooth }
-    );
+    const weightPoints = seriesFor(ranged, "weight");
+    const weightTrend =
+      fullN < 2
+        ? gap("A smoothed weight trend") +
+          " The line is every logged weight. The marker is the scale switch, not a measurement."
+        : trendRateNoteFrom(smoothPointsFor(scopedAll, "weight")) +
+          " Smoothed on " +
+          (device.label || "this scale") +
+          " only. The marker is the scale switch.";
+    setChartEmpty("chartWeight", null);
+    makeLineChart("chartWeight", weightPoints, "Weight (lb)", null, {
+      smooth: fullN < 2 ? null : smoothPointsFor(scopedAll, "weight"),
+      colorByDevice: true,
+      marker: marker,
+    });
     setTrendNote("chartWeightTrend", weightTrend);
-    makeLineChart("chartBf", seriesFor(ranged, "bf"), "Body fat %", {
+
+    const drawScoped = (canvasId, key, yLabel, refCfg, withSmooth) => {
+      const points = seriesFor(scoped, key);
+      if (!points.length) {
+        setChartEmpty(canvasId, gap(yLabel));
+        return gap(yLabel);
+      }
+      setChartEmpty(canvasId, null);
+      const trend = withSmooth ? smoothTrend(key) : null;
+      makeLineChart(canvasId, points, yLabel, refCfg, {
+        smooth: withSmooth && fullN >= 2 ? smoothPointsFor(scopedAll, key) : null,
+      });
+      return trend;
+    };
+
+    drawScoped("chartBf", "bf", "Body fat %", {
       bands: [{ min: t.bfBandMin, max: t.bfBandMax }],
     });
-    const fatSmooth = smoothPointsFor(data.scans, "fatMass");
-    const fatTrend = trendRateNoteFrom(fatSmooth);
-    makeLineChart(
-      "chartFat",
-      seriesFor(ranged, "fatMass"),
-      "Fat mass (lb)",
-      null,
-      { smooth: fatSmooth }
-    );
+    const fatTrend = drawScoped("chartFat", "fatMass", "Fat mass (lb)", null, true);
     setTrendNote("chartFatTrend", fatTrend);
-    makeLineChart(
-      "chartVisceral",
-      seriesFor(ranged, "visceral"),
-      "Visceral",
-      {
-        bands: [{ min: 1, max: t.visceralHealthyMax }],
-        lines: [
-          {
-            value: t.visceralExcess,
-            label: "13",
-            color: colors.caution,
-          },
-          {
-            value: t.visceralHigherRisk,
-            label: "15",
-            color: colors.risk || "#f87171",
-          },
-        ],
-      }
-    );
-    const lbmSmooth = smoothPointsFor(data.scans, "lbm");
-    const lbmTrend = trendRateNoteFrom(lbmSmooth);
-    makeLineChart(
-      "chartLbm",
-      seriesFor(ranged, "lbm"),
-      "Lean body mass (lb)",
-      null,
-      { smooth: lbmSmooth }
-    );
+    drawScoped("chartVisceral", "visceral", "Visceral", {
+      bands: [{ min: 1, max: t.visceralHealthyMax }],
+      lines: [
+        {
+          value: t.visceralExcess,
+          label: "13",
+          color: colors.caution,
+        },
+        {
+          value: t.visceralHigherRisk,
+          label: "15",
+          color: colors.risk || "#f87171",
+        },
+      ],
+    });
+    const lbmTrend = drawScoped("chartLbm", "lbm", "Lean body mass (lb)", null, true);
     setTrendNote("chartLbmTrend", lbmTrend);
-    makeLineChart(
-      "chartMuscle",
-      seriesFor(ranged, "muscleMass"),
-      "Muscle mass (lb)"
+    drawScoped("chartMuscle", "muscleMass", "Muscle mass (lb)");
+    setChartNote(
+      "chartMuscleNote",
+      device.id === "fitdays"
+        ? "Fitdays+ only. Feb baseline muscle label is uncertain."
+        : (device.label || "This scale") +
+            " only. Not mixed with Fitdays+ muscle mass."
     );
-    makeFatLbmChart(ranged);
+    const fatLeanRows = scoped.filter(
+      (s) => s.fatMass != null || leanLb(s) != null
+    );
+    if (!fatLeanRows.length) {
+      setChartEmpty("chartFatLbm", gap("Fat mass vs LBM"));
+    } else {
+      setChartEmpty("chartFatLbm", null);
+      makeFatLbmChart(scoped);
+    }
 
     const height = subjectHeightIn(data);
     const sex = subjectSex(data);
@@ -1752,8 +2216,12 @@
             fmt.flex(targetWaist, 3) +
             " in)."
           : "") +
-        " Only logged waist readings are plotted."
+        " Only logged waist readings are plotted." +
+        (switchOn
+          ? " Vertical line marks the scale switch on " + fmt.date(switchOn) + "."
+          : "")
     );
+    setChartEmpty("chartWaist", null);
     makeLineChart(
       "chartWaist",
       waistPts,
@@ -1769,7 +2237,7 @@
             ],
           }
         : null,
-      { digits: 3 }
+      { digits: 3, marker: marker }
     );
     setChartNote(
       "chartWhtrNote",
@@ -1779,8 +2247,12 @@
         (t.whtrTarget != null
           ? " Dashed line is the goal (" + fmt.flex(t.whtrTarget, 3) + ")."
           : "") +
-        " Only logged waist readings are plotted."
+        " Only logged waist readings are plotted." +
+        (switchOn
+          ? " Vertical line marks the scale switch on " + fmt.date(switchOn) + "."
+          : "")
     );
+    setChartEmpty("chartWhtr", null);
     makeLineChart(
       "chartWhtr",
       whtrPts,
@@ -1796,7 +2268,7 @@
             ],
           }
         : null,
-      { digits: 3 }
+      { digits: 3, marker: marker }
     );
 
     const rfmPts = rfmSeries(ranged, height, sex);
@@ -1809,35 +2281,51 @@
     } else if (!rfmPts.length) {
       rfmLead = "No waist readings in this range. ";
     }
-    setChartNote("chartRfmNote", rfmLead + rfmBase);
-    makeLineChart("chartRfm", rfmPts, "RFM %", null, { digits: 1 });
+    setChartNote(
+      "chartRfmNote",
+      rfmLead +
+        rfmBase +
+        (switchOn ? " Vertical line marks the scale switch on " + fmt.date(switchOn) + "." : "")
+    );
+    setChartEmpty("chartRfm", null);
+    makeLineChart("chartRfm", rfmPts, "RFM %", null, { digits: 1, marker: marker });
 
     const ffmiPts = [];
     const fmiPts = [];
     if (height != null) {
-      ranged.forEach((s) => {
+      scoped.forEach((s) => {
         const ff = ffmiOf(s, height);
         const fm = fmiOf(s, height);
         if (ff != null) ffmiPts.push({ x: s.date, y: ff });
         if (fm != null) fmiPts.push({ x: s.date, y: fm });
       });
     }
+    const ffmiEmpty = height != null && !ffmiPts.length && !fmiPts.length;
     setChartNote(
       "chartFfmiNote",
       height == null
         ? "FFMI and FMI need a logged height. Nothing is estimated without it."
-        : "BIA-estimated trend from scan LBM and fat mass divided by height squared (" +
-          fmt.flex(height, 3) +
-          " in). Not DEXA. Scans missing LBM or fat mass are left blank."
+        : ffmiEmpty
+          ? gap("FFMI and FMI")
+          : "BIA-estimated trend from " +
+            (device.label || "this scale") +
+            " LBM and fat mass divided by height squared (" +
+            fmt.flex(height, 3) +
+            " in). Not DEXA. Other scales are not included. Scans missing LBM or fat mass are left blank."
     );
-    makeMultiLineChart(
-      "chartFfmiFmi",
-      [
-        { label: "FFMI (kg/m²)", role: "accent", points: ffmiPts },
-        { label: "FMI (kg/m²)", role: "fat", points: fmiPts },
-      ],
-      { digits: 2 }
-    );
+    if (ffmiEmpty) {
+      setChartEmpty("chartFfmiFmi", gap("FFMI and FMI"));
+    } else {
+      setChartEmpty("chartFfmiFmi", null);
+      makeMultiLineChart(
+        "chartFfmiFmi",
+        [
+          { label: "FFMI (kg/m²)", role: "accent", points: ffmiPts },
+          { label: "FMI (kg/m²)", role: "fat", points: fmiPts },
+        ],
+        { digits: 2 }
+      );
+    }
 
 
     // Accessible data summaries (screen-reader text derived from plotted points only)
@@ -1847,21 +2335,22 @@
         " " +
         weightTrend
     );
-    attachChartSummary("chartBf", seriesSummary(seriesFor(ranged, "bf"), "Body fat percent", 1));
+    const scopedOrGap = (key, label, digits) => {
+      const points = seriesFor(scoped, key);
+      if (!points.length) return gap(label);
+      return seriesSummary(points, label, digits);
+    };
+    attachChartSummary("chartBf", scopedOrGap("bf", "Body fat percent", 1));
     attachChartSummary(
       "chartFat",
-      seriesSummary(seriesFor(ranged, "fatMass"), "Fat mass in pounds", 1) +
-        " " +
-        fatTrend
+      scopedOrGap("fatMass", "Fat mass in pounds", 1) + " " + (fatTrend || "")
     );
-    attachChartSummary("chartVisceral", seriesSummary(seriesFor(ranged, "visceral"), "Visceral fat rating", 1));
+    attachChartSummary("chartVisceral", scopedOrGap("visceral", "Visceral fat rating", 1));
     attachChartSummary(
       "chartLbm",
-      seriesSummary(seriesFor(ranged, "lbm"), "Lean body mass in pounds", 1) +
-        " " +
-        lbmTrend
+      scopedOrGap("lbm", "Lean body mass in pounds", 1) + " " + (lbmTrend || "")
     );
-    attachChartSummary("chartMuscle", seriesSummary(seriesFor(ranged, "muscleMass"), "Muscle mass in pounds", 1));
+    attachChartSummary("chartMuscle", scopedOrGap("muscleMass", "Muscle mass in pounds", 1));
     attachChartSummary("chartWaist", seriesSummary(waistPts, "Waist in inches", 2));
     attachChartSummary("chartWhtr", seriesSummary(whtrPts, "Waist-to-height ratio", 3));
     attachChartSummary("chartRfm", seriesSummary(rfmPts, "Relative fat mass percent", 1));
@@ -1870,8 +2359,8 @@
       seriesSummary(ffmiPts, "FFMI", 2) + " " + seriesSummary(fmiPts, "FMI", 2)
     );
     // Fat vs LBM dual chart
-    const fatPts = seriesFor(ranged, "fatMass");
-    const lbmPts = seriesFor(ranged, "lbm");
+    const fatPts = seriesFor(scoped, "fatMass");
+    const lbmPts = seriesFor(scoped, "lbm");
     attachChartSummary(
       "chartFatLbm",
       seriesSummary(fatPts, "Fat mass in pounds", 1) + " " + seriesSummary(lbmPts, "Lean body mass in pounds", 1)
@@ -1884,8 +2373,34 @@
     const ol = document.getElementById("timeline");
     ol.innerHTML = "";
     const baseline = findScan(data.scans, BASELINE_ID);
+    const ordered = (data.scans || [])
+      .slice()
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    const when = switchDate(data);
+    let switchPlaced = false;
+    const placeSwitch = () => {
+      if (switchPlaced || !when) return;
+      switchPlaced = true;
+      const cur = currentDevice(data);
+      const first = cur.firstOfficial ? fmt.date(cur.firstOfficial) : "the next morning";
+      const li = document.createElement("li");
+      li.className = "timeline-item device-switch";
+      li.innerHTML =
+        '<span class="timeline-dot" aria-hidden="true"></span>' +
+        '<div class="timeline-date">' +
+        fmt.date(when) +
+        "</div>" +
+        '<div class="timeline-label">Scale switch</div>' +
+        '<div class="timeline-body"><p>Fitdays+ series closed. ' +
+        escapeHtml(cur.label || "The new scale") +
+        " starts with the " +
+        escapeHtml(first) +
+        " morning scan. The Nov 5, 2026 22:33 reading was an evening test and is not logged. Composition is not compared across this date.</p></div>";
+      ol.appendChild(li);
+    };
 
-    data.scans.forEach((s) => {
+    ordered.forEach((s) => {
+      if (when && s.date >= when) placeSwitch();
       const li = document.createElement("li");
       li.className = "timeline-item" + (s.partial ? " partial" : "");
 
@@ -1908,6 +2423,11 @@
         if (s.visceral != null) bits.push(`Visceral ${fmt.num(s.visceral)}`);
         if (s.bodyAge != null) bits.push(`Body age ${fmt.int(s.bodyAge)}`);
         if (s.lbm != null) bits.push(`LBM ${fmt.num(s.lbm)} lb`);
+        else if (leanLb(s) != null) bits.push(`Fat-free ${fmt.num(leanLb(s))} lb`);
+        if (s.heartRate != null) bits.push(`Scale heart rate ${fmt.int(s.heartRate)} bpm`);
+        if (s.trunkMuscle != null || s.leftArmMuscle != null || s.leftLegMuscle != null) {
+          bits.push("Segmental muscle and fat logged");
+        }
         if (s.muscleMass != null) {
           bits.push(
             `Muscle ${fmt.num(s.muscleMass)} lb${
@@ -1927,7 +2447,13 @@
               (rfm != null ? " · RFM " + fmt.num(rfm, 1) + "%" : "")
           );
         }
-        if (baseline && s.id !== baseline.id && s.weight != null && baseline.weight != null) {
+        if (
+          baseline &&
+          s.id !== baseline.id &&
+          scanDeviceId(s) === scanDeviceId(baseline) &&
+          s.weight != null &&
+          baseline.weight != null
+        ) {
           const dw = s.weight - baseline.weight;
           const df = s.fatMass != null && baseline.fatMass != null
             ? s.fatMass - baseline.fatMass
@@ -1945,13 +2471,16 @@
         <div class="timeline-date">${fmt.date(s.date)}${
           parseClock(s.scanTime) ? " · " + escapeHtml(parseClock(s.scanTime).text) : ""
         }</div>
-        <div class="timeline-label">${s.label || "Scan"}${
+        <div class="timeline-label">${escapeHtml(s.label || "Scan")}${
         s.partial ? '<span class="badge">Partial</span>' : ""
-      }</div>
+      }<span class="timeline-device">${escapeHtml(
+        deviceById(data, scanDeviceId(s)).label || scanDeviceId(s)
+      )}</span></div>
         <div class="timeline-body">${body}</div>
       `;
       ol.appendChild(li);
     });
+    placeSwitch();
   }
 
   function renderGoals(data) {
@@ -1989,6 +2518,26 @@
     const rights = data.meta.rights || "";
     const footerCopy = document.getElementById("footerCopyright");
     if (footerCopy) footerCopy.textContent = copy;
+    const footerDevice = document.getElementById("footerDevice");
+    if (footerDevice) {
+      const subject = data.meta.subject || {};
+      const cur = currentDevice(data);
+      const bits = [];
+      if (subject.sex) {
+        bits.push(subject.sex.charAt(0).toUpperCase() + subject.sex.slice(1));
+      }
+      if (subject.age != null) bits.push(String(subject.age));
+      bits.push(
+        (cur.label || cur.id) + (cur.from ? " from " + fmt.date(cur.from) : "")
+      );
+      deviceCatalog(data).forEach((d) => {
+        if (d.id === cur.id) return;
+        bits.push((d.label || d.id) + (d.through ? " through " + fmt.date(d.through) : ""));
+      });
+      bits.push("Data from data.json");
+      footerDevice.textContent = bits.join(" · ");
+    }
+
     const copyLine = document.getElementById("copyrightLine");
     if (copyLine) copyLine.innerHTML = "<strong>" + copy + "</strong>";
     const rightsLine = document.getElementById("rightsLine");
@@ -2004,29 +2553,39 @@
   function renderConsistency(data) {
     const chip = document.getElementById("consistencyChip");
     if (!chip) return;
-    const full = fullScans(data.scans);
-    const latest = latestFullScan(data.scans);
+    const device = viewDevice(data);
+    const scoped = scansOnDevice(data.scans || [], device.id);
+    const full = fullScans(scoped);
+    const latest = latestFullScan(scoped);
     const n = full.length;
     const days = latest ? daysSince(latest.date) : null;
-    let daysTxt = "—";
+    let daysTxt = "no scan yet";
     if (days != null) {
       if (days === 0) daysTxt = "today";
       else if (days === 1) daysTxt = "1 day ago";
       else daysTxt = days + " days ago";
     }
     chip.textContent =
-      n + " full scan" + (n === 1 ? "" : "s") + " · last " + daysTxt;
-    chip.title =
-      "Full scans (non-partial with weight): " +
+      (device.label || "Scale") +
+      " · " +
       n +
-      ". Last full scan: " +
-      (latest ? fmt.date(latest.date) : "—");
+      " full scan" +
+      (n === 1 ? "" : "s") +
+      " · " +
+      daysTxt;
+    chip.title =
+      (device.label || "This scale") +
+      " full scans (non-partial with weight): " +
+      n +
+      ". Last full scan on this scale: " +
+      (latest ? fmt.date(latest.date) : "none yet") +
+      ". Other scales are not included.";
   }
 
   function lbmFullScans(scans) {
     return fullScans(scans)
       .map((s, i) => ({ s: s, i: i }))
-      .filter(({ s }) => numericField(s, "lbm") != null)
+      .filter(({ s }) => leanLb(s) != null)
       .sort((a, b) => {
         if (String(a.s.date) < String(b.s.date)) return -1;
         if (String(a.s.date) > String(b.s.date)) return 1;
@@ -2053,14 +2612,15 @@
     if (!root) return;
     root.hidden = true;
     root.innerHTML = "";
-    const pool = lbmFullScans(data.scans || []);
+    const device = viewDevice(data);
+    const pool = lbmFullScans(scansOnDevice(data.scans || [], device.id));
     if (pool.length < 3) return;
     const older = pool[pool.length - 3];
     const mid = pool[pool.length - 2];
     const latest = pool[pool.length - 1];
-    const a = numericField(older, "lbm");
-    const b = numericField(mid, "lbm");
-    const c = numericField(latest, "lbm");
+    const a = leanLb(older);
+    const b = leanLb(mid);
+    const c = leanLb(latest);
     if (a == null || b == null || c == null || !(b < a && c < b)) return;
     const priority = fatStillDropping(older, mid, latest)
       ? "Preserving lean is the priority while fat is still dropping."
@@ -2095,10 +2655,20 @@
     if (!root) return;
     root.hidden = true;
     root.innerHTML = "";
-    const scans = data.scans || [];
+    const device = viewDevice(data);
+    const scans = scansOnDevice(data.scans || [], device.id);
     const latest = latestFullScan(scans);
     const prev = latest ? previousFullScan(scans, latest) : null;
-    if (!latest || !prev || prev.id === latest.id) return;
+    const fullN = fullScans(scans).length;
+    if (!latest || !prev || prev.id === latest.id) {
+      root.hidden = false;
+      root.innerHTML =
+        "<h3>What moved since the prior full scan</h3>" +
+        '<p class="moved-caveat">' +
+        escapeHtml(deviceGapMessage(device, fullN, 2, "What moved")) +
+        "</p>";
+      return;
+    }
     const specs = [
       {
         key: "weight",
@@ -2131,8 +2701,8 @@
     ];
     const rows = [];
     specs.forEach((spec) => {
-      const cur = numericField(latest, spec.key);
-      const prior = numericField(prev, spec.key);
+      const cur = metricValue(latest, spec.key);
+      const prior = metricValue(prev, spec.key);
       if (cur == null || prior == null) return;
       const info = deltaInfo(cur, prior, {
         lowerBetter: spec.lowerBetter,
@@ -2170,6 +2740,8 @@
       fmt.date(prev.date) +
       " → " +
       fmt.date(latest.date) +
+      " · " +
+      escapeHtml(device.label || "") +
       "</p>" +
       '<div class="moved-grid">' +
       rows.join("") +
@@ -2238,8 +2810,8 @@
     const w1 = numericField(end, "weight");
     const f0 = numericField(start, "fatMass");
     const f1 = numericField(end, "fatMass");
-    const l0 = numericField(start, "lbm");
-    const l1 = numericField(end, "lbm");
+    const l0 = leanLb(start);
+    const l1 = leanLb(end);
     const weightDelta = w0 != null && w1 != null ? w1 - w0 : null;
     const fatDelta = f0 != null && f1 != null ? f1 - f0 : null;
     const lbmDelta = l0 != null && l1 != null ? l1 - l0 : null;
@@ -2361,11 +2933,16 @@
     const root = document.getElementById("lossQuality");
     const section = document.getElementById("lossQualitySection");
     if (!root) return;
-    const scans = (data && data.scans) || [];
+    const device = viewDevice(data);
+    const scans = scansOnDevice((data && data.scans) || [], device.id);
     const latest = latestFullScan(scans);
-    if (!latest || numericField(latest, "weight") == null || latest.partial) {
-      root.innerHTML = "";
-      if (section) section.hidden = true;
+    const fullN = fullScans(scans).length;
+    if (!latest || numericField(latest, "weight") == null || latest.partial || fullN < 2) {
+      root.innerHTML = lossWindowCard({
+        title: "Loss quality",
+        empty: deviceGapMessage(device, fullN, 2, "Loss quality"),
+      });
+      if (section) section.hidden = false;
       return;
     }
     const peak = peakWeightScan(scans);
@@ -2417,11 +2994,24 @@
     const root = document.getElementById("goalProgressBars");
     if (!root) return;
     const t = getTargets(data);
-    const baseline = findScan(data.scans, BASELINE_ID);
-    const latest = latestFullScan(data.scans);
+    const device = viewDevice(data);
+    const scans = scansOnDevice(data.scans || [], device.id);
+    const baseline = deviceBaseline(scans, device);
+    const latest = latestFullScan(scans);
+    const fullN = fullScans(scans).length;
     root.innerHTML = "";
 
-    if (latest.bf != null) {
+    if (!latest || fullN < 2) {
+      const note = document.createElement("p");
+      note.className = "device-gap";
+      note.textContent = deviceGapMessage(
+        device,
+        fullN,
+        2,
+        "Body-fat, visceral, fat-mass, and lean-floor progress"
+      );
+      root.appendChild(note);
+    } else if (latest.bf != null) {
       const bf = latest.bf;
       const upper = t.bfUpperTarget;
       const stretch = t.bfStretch;
@@ -2469,7 +3059,7 @@
       root.appendChild(item);
     }
 
-    if (latest.visceral != null) {
+    if (latest && fullN >= 2 && latest.visceral != null) {
       const v = latest.visceral;
       const maxH = t.visceralHealthyMax;
       const start =
@@ -2509,7 +3099,7 @@
       root.appendChild(item);
     }
 
-    if (latest.fatMass != null && baseline && baseline.fatMass != null) {
+    if (latest && fullN >= 2 && latest.fatMass != null && baseline && baseline.fatMass != null) {
       const lost = baseline.fatMass - latest.fatMass;
       const barPct =
         lost > 0
@@ -2521,9 +3111,13 @@
       const item = document.createElement("div");
       item.className = "progress-item";
       item.innerHTML = `
-        <h4>Fat mass vs Feb baseline</h4>
+        <h4>Fat mass vs ${
+          baseline.id === BASELINE_ID ? "Feb baseline" : "first scan on this scale"
+        }</h4>
         <div class="progress-meta">
-          <span>Feb ${fmt.num(baseline.fatMass)} lb → now ${fmt.num(
+          <span>${
+            baseline.id === BASELINE_ID ? "Feb" : fmt.date(baseline.date)
+          } ${fmt.num(baseline.fatMass)} lb → now ${fmt.num(
             latest.fatMass
           )} lb</span>
           <span>${
@@ -2555,15 +3149,15 @@
 
     const leanMetric = t.leanMetric || "lbm";
     const leanGain = t.leanGainLb != null ? t.leanGainLb : 20;
-    const floorScan = leanFloorScan(data.scans, t);
-    const leanNow =
-      latest[leanMetric] != null
-        ? latest[leanMetric]
-        : latest.muscleMass != null
-          ? latest.muscleMass
-          : null;
-    if (leanNow != null && floorScan && floorScan[leanMetric] != null) {
-      const floor = floorScan[leanMetric];
+    const floorScan = latest && fullN >= 2 ? leanFloorScan(scans, t) : null;
+    const leanNow = !latest
+      ? null
+      : metricValue(latest, leanMetric) != null
+        ? metricValue(latest, leanMetric)
+        : numericField(latest, "muscleMass");
+    const floorValue = floorScan ? metricValue(floorScan, leanMetric) : null;
+    if (leanNow != null && floorValue != null) {
+      const floor = floorValue;
       const target = floor + leanGain;
       const gained = leanNow - floor;
       const progressed = Math.max(0, Math.min(1, gained / leanGain));
@@ -2641,8 +3235,8 @@
    */
   function localSmoothedRate(scansInWindow, key) {
     const pts = (scansInWindow || [])
-      .filter((s) => numericField(s, key) != null)
-      .map((s) => ({ x: s.date, y: numericField(s, key) }));
+      .filter((s) => metricValue(s, key) != null)
+      .map((s) => ({ x: s.date, y: metricValue(s, key) }));
     const smooth = ewmaSeries(pts);
     if (smooth.length < 2) return null;
     const from = smooth[0];
@@ -2789,16 +3383,31 @@
   }
 
   function renderGoalPace(data, t, root) {
+    const device = viewDevice(data);
+    const scans = scansOnDevice(data.scans || [], device.id);
     const goals = weightGoals(t);
-    const weightSmooth = smoothPointsFor(data.scans || [], "weight");
-    const recent = smoothedWindowRate(weightSmooth, TREND_WINDOW_DAYS);
-    const longer = smoothedWindowRate(
-      weightSmooth,
-      LONG_TREND_WINDOW_DAYS,
-      t.cutStart
-    );
-    const stall = stallNote(data.scans || [], longer);
-    if (!stall && !(goals.length && (recent || longer))) return null;
+    const fullN = datedFullScans(scans).length;
+    const weightSmooth = smoothPointsFor(scans, "weight");
+    const recent = fullN >= 2 ? smoothedWindowRate(weightSmooth, TREND_WINDOW_DAYS) : null;
+    const longer =
+      fullN >= 2
+        ? smoothedWindowRate(weightSmooth, LONG_TREND_WINDOW_DAYS, t.cutStart)
+        : null;
+    const windowScans = recentScanWindow(scans, TREND_WINDOW_DAYS);
+    const stallWeight = localSmoothedRate(windowScans, "weight");
+    const stallFat = localSmoothedRate(windowScans, "fatMass");
+    const stallReady =
+      fullN >= STALL_MIN_SCANS &&
+      stallWeight &&
+      stallFat &&
+      stallWeight.count >= STALL_MIN_SCANS &&
+      stallFat.count >= STALL_MIN_SCANS &&
+      stallWeight.days >= STALL_MIN_DAYS &&
+      stallFat.days >= STALL_MIN_DAYS;
+    const stall = stallReady ? stallNote(scans, longer) : null;
+    if (!stall && !stallReady && !(goals.length && (recent || longer)) && !goals.length) {
+      return null;
+    }
 
     const block = document.createElement("div");
     block.className = "pace-goal";
@@ -2810,6 +3419,14 @@
       note.textContent = stall;
       block.appendChild(note);
       summary.push(stall);
+    } else if (!stallReady) {
+      const note = document.createElement("p");
+      note.className = "pace-stall";
+      note.textContent =
+        deviceGapMessage(device, fullN, STALL_MIN_SCANS, "The stall check") +
+        " It also needs a 28-day span on this scale.";
+      block.appendChild(note);
+      summary.push(note.textContent);
     }
 
     if (goals.length && (recent || longer)) {
@@ -2850,8 +3467,7 @@
       });
     } else if (goals.length) {
       const p = document.createElement("p");
-      p.textContent =
-        "Not enough full scans for a smoothed weight trend. Partial scans are skipped.";
+      p.textContent = deviceGapMessage(device, fullN, 2, "Goal pace");
       block.appendChild(p);
       summary.push(p.textContent);
     }
@@ -2878,8 +3494,10 @@
     const root = document.getElementById("paceContent");
     if (!root) return;
     const t = getTargets(data);
-    const baseline = findScan(data.scans, BASELINE_ID);
-    const latest = latestFullScan(data.scans);
+    const device = viewDevice(data);
+    const scans = scansOnDevice(data.scans || [], device.id);
+    const baseline = deviceBaseline(scans, device);
+    const latest = latestFullScan(scans);
     root.innerHTML = "";
     const summaryBits = [];
 
@@ -2888,12 +3506,14 @@
 
     if (!baseline || !latest || baseline.id === latest.id) {
       if (!root.childElementCount) {
-        root.innerHTML =
-          "<p>Need Feb baseline and a later comparable full scan to estimate pace.</p>";
+        const p = document.createElement("p");
+        p.textContent = deviceGapMessage(device, fullScans(scans).length, 2, "Goal pace");
+        root.appendChild(p);
       }
       setPaceSummary(summaryBits.join(" "));
       return;
     }
+    const baseName = baseline.id === BASELINE_ID ? "Feb" : fmt.date(baseline.date);
 
     const days = daysBetween(baseline.date, latest.date);
     const weeks = days / 7;
@@ -2907,7 +3527,9 @@
       if (ratePerWeek >= -0.001) {
         if (Math.abs(ratePerWeek) < 0.001) {
           etaHtml =
-            "<strong>BF% pace:</strong> flat since Feb — not closing on 20% at current rate.";
+            "<strong>BF% pace:</strong> flat since " +
+            baseName +
+            " — not closing on 20% at current rate.";
         } else {
           etaHtml =
             "<strong>BF% pace:</strong> rising (" +
@@ -2928,12 +3550,14 @@
             t.bfUpperTarget +
             "%:</strong> ~" +
             fmt.num(weeksEta, 0) +
-            " weeks if Feb→latest rate continues.";
+            " weeks if " +
+            baseName +
+            "→latest rate continues.";
         }
       }
       row.innerHTML =
         etaHtml +
-        `<span class="pace-detail">Feb ${fmt.num(baseline.bf)}% → ${fmt.date(
+        `<span class="pace-detail">${baseName} ${fmt.num(baseline.bf)}% → ${fmt.date(
           latest.date
         )} ${fmt.num(latest.bf)}% (${fmt.signed(dBf)} pp over ${fmt.int(
           days
@@ -2954,7 +3578,7 @@
             : lost < -0.05
               ? fmt.num(-lost) + " lb gained"
               : "flat"
-        } since Feb` +
+        } since ${baseName}` +
         `<span class="pace-detail">${fmt.signed(
           ratePerWeek
         )} lb/week over ${fmt.int(days)} days (${fmt.date(
@@ -2966,22 +3590,47 @@
   }
 
   function renderComposition(data) {
-    const latest = latestFullScan(data.scans);
+    const device = viewDevice(data);
+    const scans = scansOnDevice(data.scans || [], device.id);
+    const latest = latestFullScan(scans);
     const meta = document.getElementById("compositionMeta");
-    if (meta) {
-      meta.textContent =
-        fmt.date(latest.date) + " · " + (latest.label || "Scan");
-    }
     const legend = document.getElementById("compLegend");
     const canvas = document.getElementById("chartComposition");
-    if (!canvas || typeof Chart === "undefined") return;
-
     if (compositionChart) {
       compositionChart.destroy();
       const idx = charts.indexOf(compositionChart);
       if (idx >= 0) charts.splice(idx, 1);
       compositionChart = null;
     }
+    if (!latest) {
+      if (meta) {
+        meta.textContent = (device.label || "Current scale") + " · no official scan yet";
+      }
+      if (legend) {
+        legend.innerHTML =
+          "<li>" +
+          escapeHtml(deviceGapMessage(device, fullScans(scans).length, 1, "This snapshot")) +
+          "</li>";
+      }
+      if (canvas) {
+        canvas.hidden = true;
+        attachChartSummary(
+          "chartComposition",
+          deviceGapMessage(device, fullScans(scans).length, 1, "This snapshot")
+        );
+      }
+      return;
+    }
+    if (canvas) canvas.hidden = false;
+    if (meta) {
+      meta.textContent =
+        fmt.date(latest.date) +
+        " · " +
+        (latest.label || "Scan") +
+        " · " +
+        (device.label || "");
+    }
+    if (!canvas || typeof Chart === "undefined") return;
 
     const colors = chartColors();
     const slices = [];
@@ -2996,16 +3645,17 @@
       slices.push(latest.fatMass);
       bg.push(fatColor);
     }
-    if (latest.lbm != null && latest.bone != null && latest.lbm > latest.bone) {
+    const lean = leanLb(latest);
+    if (lean != null && latest.bone != null && lean > latest.bone) {
       labels.push("Soft lean (LBM − bone)");
-      slices.push(latest.lbm - latest.bone);
+      slices.push(lean - latest.bone);
       bg.push(leanColor);
       labels.push("Bone");
       slices.push(latest.bone);
       bg.push(boneColor);
-    } else if (latest.lbm != null) {
-      labels.push("LBM (lean body mass)");
-      slices.push(latest.lbm);
+    } else if (lean != null) {
+      labels.push(latest.lbm != null ? "LBM (lean body mass)" : "Fat-free mass");
+      slices.push(lean);
       bg.push(leanColor);
     }
 
@@ -3020,18 +3670,20 @@
         )} lb</span>`;
         legend.appendChild(li);
       });
-      if (latest.lbm != null && latest.fatMass != null) {
+      if (lean != null && latest.fatMass != null) {
         const note = document.createElement("li");
         note.style.fontSize = "0.75rem";
         note.style.color = "var(--text-subtle)";
         note.textContent =
           "Fat " +
           fmt.num(latest.fatMass) +
-          " + LBM " +
-          fmt.num(latest.lbm) +
+          " + " +
+          (latest.lbm != null ? "LBM " : "fat-free ") +
+          fmt.num(lean) +
           " = " +
-          fmt.num(latest.fatMass + latest.lbm) +
-          " lb.";
+          fmt.num(latest.fatMass + lean) +
+          " lb. " +
+          (device.label || "");
         legend.appendChild(note);
       }
     }
@@ -3081,12 +3733,14 @@
     }
   }
 
-  function scanOptionLabel(s) {
+  function scanOptionLabel(s, data) {
+    const device = data ? deviceById(data, scanDeviceId(s)) : null;
     return (
       fmt.date(s.date) +
       " · " +
       (s.label || "Scan") +
-      (s.partial ? " (partial)" : "")
+      (s.partial ? " (partial)" : "") +
+      (device && device.label ? " · " + device.label : "")
     );
   }
 
@@ -3105,7 +3759,7 @@
       scans.forEach((s) => {
         const opt = document.createElement("option");
         opt.value = s.id;
-        opt.textContent = scanOptionLabel(s);
+        opt.textContent = scanOptionLabel(s, data);
         sel.appendChild(opt);
       });
       if (preferredId && findScan(scans, preferredId)) {
@@ -3133,6 +3787,15 @@
     const a = findScan(data.scans, selA.value);
     const b = findScan(data.scans, selB.value);
     body.innerHTML = "";
+    const cross = a && b && scanDeviceId(a) !== scanDeviceId(b);
+    const compareNote = document.getElementById("compareDeviceNote");
+    if (compareNote) {
+      compareNote.hidden = !cross;
+      compareNote.textContent = cross
+        ? "These scans are different scales. Weight and body-composition deltas are left blank so the switch is not read as a body change. Waist, WHtR, and RFM still compare because they come from the tape."
+        : "";
+    }
+    const tapeLabels = { "Waist (in)": true, "WHtR": true, "RFM %": true };
 
     const metrics = [
       { key: "weight", label: "Weight (lb)", digits: 1, lowerBetter: true },
@@ -3184,6 +3847,23 @@
           return rfmOf(s, subjectHeightIn(data), subjectSex(data));
         },
       },
+      { key: "fatFreeMass", label: "Fat-free mass (lb)", digits: 1, lowerBetter: false, optional: true },
+      { key: "skeletalMuscleMass", label: "Skeletal muscle mass (lb)", digits: 1, lowerBetter: false, optional: true },
+      { key: "bodyCellMass", label: "Body cell mass (lb)", digits: 1, lowerBetter: false, optional: true },
+      { key: "minerals", label: "Minerals (lb)", digits: 1, lowerBetter: false, optional: true },
+      { key: "intracellularWater", label: "Intracellular water (lb)", digits: 1, lowerBetter: false, optional: true },
+      { key: "extracellularWater", label: "Extracellular water (lb)", digits: 1, lowerBetter: false, optional: true },
+      { key: "heartRate", label: "Scale heart rate (bpm)", digits: 0, lowerBetter: false, noTone: true, optional: true },
+      { key: "leftArmMuscle", label: "Left arm muscle (lb)", digits: 1, lowerBetter: false, optional: true },
+      { key: "leftArmFat", label: "Left arm fat (lb)", digits: 1, lowerBetter: true, optional: true },
+      { key: "rightArmMuscle", label: "Right arm muscle (lb)", digits: 1, lowerBetter: false, optional: true },
+      { key: "rightArmFat", label: "Right arm fat (lb)", digits: 1, lowerBetter: true, optional: true },
+      { key: "leftLegMuscle", label: "Left leg muscle (lb)", digits: 1, lowerBetter: false, optional: true },
+      { key: "leftLegFat", label: "Left leg fat (lb)", digits: 1, lowerBetter: true, optional: true },
+      { key: "rightLegMuscle", label: "Right leg muscle (lb)", digits: 1, lowerBetter: false, optional: true },
+      { key: "rightLegFat", label: "Right leg fat (lb)", digits: 1, lowerBetter: true, optional: true },
+      { key: "trunkMuscle", label: "Trunk muscle (lb)", digits: 1, lowerBetter: false, optional: true },
+      { key: "trunkFat", label: "Trunk fat (lb)", digits: 1, lowerBetter: true, optional: true },
     ];
 
     metrics.forEach((m) => {
@@ -3196,9 +3876,12 @@
       const bTxt =
         bv == null ? "—" : dig === 0 ? fmt.int(bv) : fmt.num(bv, dig);
 
+      if (m.optional && av == null && bv == null) return;
       let deltaCell;
       if (av == null || bv == null) {
         deltaCell = `<td class="na">n/a</td>`;
+      } else if (cross && !tapeLabels[m.label]) {
+        deltaCell = `<td class="na">Different scales</td>`;
       } else {
         const d = bv - av;
         let tone = "neutral";
@@ -3248,6 +3931,7 @@
     const keys = [
       "id",
       "date",
+      "device",
       "label",
       "partial",
       "weight",
@@ -3274,6 +3958,35 @@
       "whtr",
       "rfm",
       "scanTime",
+      "fatFreeMass",
+      "skeletalMuscleMass",
+      "bodyCellMass",
+      "minerals",
+      "intracellularWater",
+      "extracellularWater",
+      "intracellularWaterPct",
+      "extracellularWaterPct",
+      "heartRate",
+      "leftArmMuscle",
+      "leftArmFat",
+      "leftArmMusclePct",
+      "leftArmFatPct",
+      "rightArmMuscle",
+      "rightArmFat",
+      "rightArmMusclePct",
+      "rightArmFatPct",
+      "leftLegMuscle",
+      "leftLegFat",
+      "leftLegMusclePct",
+      "leftLegFatPct",
+      "rightLegMuscle",
+      "rightLegFat",
+      "rightLegMusclePct",
+      "rightLegFatPct",
+      "trunkMuscle",
+      "trunkFat",
+      "trunkMusclePct",
+      "trunkFatPct",
     ];
     const height = subjectHeightIn(data);
     const sex = subjectSex(data);
@@ -3321,6 +4034,57 @@
       const on = btn.getAttribute("data-range") === chartRange;
       btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
+  }
+
+  function syncDeviceButtons(data) {
+    const root = document.getElementById("deviceToggle");
+    if (!root || !data) return;
+    const active = viewDevice(data).id;
+    root.innerHTML = "";
+    orderedDevices(data).forEach((device) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "device-btn";
+      btn.setAttribute("data-device", device.id);
+      btn.setAttribute("aria-pressed", device.id === active ? "true" : "false");
+      btn.textContent = deviceButtonLabel(data, device);
+      root.appendChild(btn);
+    });
+    const note = document.getElementById("deviceNote");
+    if (note) note.textContent = deviceBanner(data);
+  }
+
+  function rerender() {
+    if (!appData) return;
+    syncDeviceButtons(appData);
+    renderConsistency(appData);
+    renderMetrics(appData);
+    renderGoalProgress(appData);
+    renderPace(appData);
+    renderCompare(appData);
+    renderTimeline(appData);
+    renderGoals(appData);
+    if (typeof Chart !== "undefined") renderCharts(appData);
+  }
+
+  function wireDevice(data) {
+    const stored = localStorage.getItem(DEVICE_KEY);
+    const ids = deviceCatalog(data).map((d) => d.id);
+    deviceViewId = stored && ids.indexOf(stored) !== -1 ? stored : null;
+    const root = document.getElementById("deviceToggle");
+    if (root && root.dataset.ready !== "1") {
+      root.dataset.ready = "1";
+      root.addEventListener("click", (event) => {
+        const btn = event.target.closest("[data-device]");
+        if (!btn || !appData) return;
+        const id = btn.getAttribute("data-device");
+        if (!id || id === viewDevice(appData).id) return;
+        deviceViewId = id;
+        localStorage.setItem(DEVICE_KEY, id);
+        rerender();
+      });
+    }
+    syncDeviceButtons(data);
   }
 
   function wireRange() {
@@ -3373,6 +4137,7 @@
     }
 
     appData = data;
+    wireDevice(data);
     renderConsistency(data);
     renderMetrics(data);
     renderGoalProgress(data);
