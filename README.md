@@ -52,6 +52,8 @@ Optional segmental-scale fields. Leave unknown values out. Do not estimate them.
 - `intracellularWater`, `extracellularWater` — water mass in lb. Optional `intracellularWaterPct` and `extracellularWaterPct`.
 - `heartRate` — the scale's heart-rate reading in bpm.
 - Segmental muscle and fat, in lb, plus optional percent: `leftArmMuscle`, `leftArmFat`, `rightArmMuscle`, `rightArmFat`, `leftLegMuscle`, `leftLegFat`, `rightLegMuscle`, `rightLegFat`, `trunkMuscle`, `trunkFat`, and the same names with a `Pct` suffix.
+- `subqFatMass` — subcutaneous fat mass in lb. `subqFat` stays the percent.
+- `waistHipRatio` — the scale's waist-hip ratio. Not a tape waist. Do not copy it into `waistIn`.
 
 ## How to read this
 

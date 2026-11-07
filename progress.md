@@ -2,6 +2,16 @@
 
 Newest entry at the top.
 
+## 2026-11-07
+
+- First official segmental-scale scan (`device: "segmental"`, 08:08). Weight 199.9, BF 26.1%, fat 52.2, fat-free 147.4, muscle mass 137.5, skeletal muscle 84.4, visceral 9, heart rate 97
+- vs Nov 1 weight: −0.3 lb (200.2 → 199.9). Weight stays continuous. BF, fat, visceral, fat-free, and muscle are a new baseline and are not compared with Fitdays+
+- Confounders: late scan (target 06:30); heart rate 97, slightly high; lean trend cannot be judged across the scale switch
+- Waist not measured (last tape 36.58 in on Nov 1). Scale waist-hip ratio 0.89, not used as a tape waist
+- Segmental muscle (lb): L arm 7.2, R arm 7.9, trunk 65.2, L leg 23.1, R leg 23.5. Segmental fat (lb): L arm 3.3, R arm 2.8, trunk 26.8, L leg 7.0, R leg 7.0
+- Scan: `scans/2026-11-07.md`
+- Council: `council/2026-11-07.md`
+
 ## 2026-11-06
 
 - Switched body-composition scales. Fitdays+ (foot-only BIA, `device: "fitdays"`) ends with the 2026-11-01 scan, 28 scans in `docs/data.json`. The new scale is segmental BIA (`device: "segmental"`); the brand was not on the screen.
