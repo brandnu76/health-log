@@ -55,6 +55,18 @@ Optional segmental-scale fields. Leave unknown values out. Do not estimate them.
 - `subqFatMass` — subcutaneous fat mass in lb. `subqFat` stays the percent.
 - `waistHipRatio` — the scale's waist-hip ratio. Not a tape waist. Do not copy it into `waistIn`.
 
+### Labs in `data.json`
+
+Optional top-level `labs` array. It ships empty. Missing `labs` is the same as `[]`: the dashboard shows an empty state and does not error. Do not estimate or prefill values. When appending a Saturday scan, leave `labs` as it is. Do not copy lab numbers onto scans.
+
+Each entry, once a printed report is in hand:
+
+- `date` — draw date, `YYYY-MM-DD`
+- `source` — where the report came from, such as `VA`
+- `markers[]` — `name`, `value`, `unit`, `refLow`, `refHigh` exactly as printed. Omit a bound the report does not print.
+
+The dashboard compares a value only to the low and high stored on that result. HbA1c and fasting glucose also show the published ADA bands, labeled as general reference, not a diagnosis. The section is not a diagnosis and does not advise on medication.
+
 ## How to read this
 
 - `scans/` — raw metrics, same fields every time

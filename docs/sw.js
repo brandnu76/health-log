@@ -1,4 +1,4 @@
-const CACHE = "health-log-v12";
+const CACHE = "health-log-v13";
 const PRECACHE = [
   "./",
   "./index.html",
@@ -17,6 +17,7 @@ const PRECACHE = [
   "./fuel.js",
   "./lifts.js",
   "./program.js",
+  "./labs.js",
   "./data.json",
   "./manifest.webmanifest",
   "./icon.svg",
