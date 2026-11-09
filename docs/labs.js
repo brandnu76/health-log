@@ -1,7 +1,10 @@
 /* Metabolic labs — optional, self-contained.
  * Reads data.labs from data.json. Missing or empty => empty state, never an error.
- * Status uses only the reference low/high stored with that result.
- * ADA sentences for HbA1c and fasting glucose are labeled general reference, not a diagnosis.
+ * Values are shown as stored. Strings such as NEGATIVE or <0.10 stay strings.
+ * In-range status uses only the reference low/high stored with that numeric result.
+ * ADA sentences for HbA1c and glucose are labeled general reference, not a diagnosis.
+ * Draw dots are painted on the weight chart only inside that chart's date labels.
+ * They never add dates to the axis, so older draws do not stretch the chart.
  * Does not edit scans, fuel, lifts, or the scale split. Does not invent values.
  */
 (function (root, factory) {
@@ -27,8 +30,24 @@
     return n;
   }
 
+  function labelSpan(labels) {
+    var minL = null;
+    var maxL = null;
+    var i;
+    if (!labels) return null;
+    for (i = 0; i < labels.length; i++) {
+      if (!DATE_RE.test(labels[i])) continue;
+      if (minL === null || labels[i] < minL) minL = labels[i];
+      if (maxL === null || labels[i] > maxL) maxL = labels[i];
+    }
+    if (minL === null) return null;
+    return { min: minL, max: maxL };
+  }
+
   function markerPixel(scale, labels, iso, area) {
     if (!scale || !area || !labels || !labels.length || !iso) return null;
+    var span = labelSpan(labels);
+    if (!span || iso < span.min || iso > span.max) return null;
     var i;
     for (i = 0; i < labels.length; i++) {
       if (labels[i] === iso) return scale.getPixelForValue(i);
@@ -36,26 +55,16 @@
     var prev = -1;
     var next = -1;
     for (i = 0; i < labels.length; i++) {
+      if (!DATE_RE.test(labels[i])) continue;
       if (labels[i] < iso) prev = i;
-      else {
+      else if (labels[i] > iso) {
         next = i;
         break;
       }
     }
-    if (prev < 0 && next >= 0) {
-      if (api.daysBetween(iso, labels[next]) > api.MARKER_WINDOW_DAYS) return null;
-      return scale.getPixelForValue(next);
-    }
-    if (prev >= 0 && next < 0) {
-      if (api.daysBetween(labels[prev], iso) > api.MARKER_WINDOW_DAYS) return null;
-      var last = scale.getPixelForValue(prev);
-      var prevPx = prev > 0 ? scale.getPixelForValue(prev - 1) : last - 28;
-      var step = Math.max(16, last - prevPx);
-      return Math.min(area.right - 8, last + step * 0.45);
-    }
     if (prev < 0 || next < 0) return null;
-    var span = api.daysBetween(labels[prev], labels[next]);
-    var t = span > 0 ? api.daysBetween(labels[prev], iso) / span : 0;
+    var gap = api.daysBetween(labels[prev], labels[next]);
+    var t = gap > 0 ? api.daysBetween(labels[prev], iso) / gap : 0;
     var p0 = scale.getPixelForValue(prev);
     var p1 = scale.getPixelForValue(next);
     return p0 + (p1 - p0) * t;
@@ -110,7 +119,7 @@
     var h2 = el("h2", null, "Metabolic labs");
     h2.id = "labs-heading";
     head.appendChild(h2);
-    head.appendChild(el("span", "meta", "Latest value per marker \u00b7 range as printed"));
+    head.appendChild(el("span", "meta", "Latest key markers \u00b7 full history below \u00b7 range as printed"));
     section.appendChild(head);
     section.appendChild(el("p", "lab-provider", "Discuss results with your VA provider."));
     var body = el("div", null);
@@ -139,15 +148,19 @@
   }
 
   function sparkline(marker) {
-    var points = marker.points;
+    var points = [];
+    var i;
+    for (i = 0; i < marker.points.length; i++) {
+      var p = marker.points[i];
+      if (p.value !== null && isFinite(p.value)) points.push(p);
+    }
     var wrap = el("div", "lab-spark-wrap");
-    var summary = api.sparkSummary(marker);
-    wrap.appendChild(el("p", "sr-only", summary));
+    wrap.appendChild(el("p", "sr-only", api.sparkSummary(marker)));
     if (points.length < 2) return wrap;
 
-    var w = 96;
-    var h = 28;
-    var pad = 4;
+    var w = 168;
+    var h = 36;
+    var pad = 5;
     var vals = points.map(function (p) { return p.value; });
     var lo = Math.min.apply(null, vals);
     var hi = Math.max.apply(null, vals);
@@ -155,13 +168,20 @@
       hi += 1;
       lo -= 1;
     }
-    var coords = points.map(function (p, i) {
-      var x = pad + (i / (points.length - 1)) * (w - pad * 2);
+    var t0 = Date.parse(points[0].date + "T12:00:00");
+    var t1 = Date.parse(points[points.length - 1].date + "T12:00:00");
+    var coords = points.map(function (p, idx) {
+      var x;
+      if (!(t1 > t0)) x = pad + (idx / (points.length - 1)) * (w - pad * 2);
+      else {
+        var t = Date.parse(p.date + "T12:00:00");
+        x = pad + ((t - t0) / (t1 - t0)) * (w - pad * 2);
+      }
       var y = pad + (1 - (p.value - lo) / (hi - lo)) * (h - pad * 2);
       return [x, y];
     });
     var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("class", "lab-spark");
+    svg.setAttribute("class", "lab-spark lab-spark-wide");
     svg.setAttribute("viewBox", "0 0 " + w + " " + h);
     svg.setAttribute("aria-hidden", "true");
     svg.setAttribute("focusable", "false");
@@ -174,9 +194,14 @@
     var dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     dot.setAttribute("cx", last[0].toFixed(1));
     dot.setAttribute("cy", last[1].toFixed(1));
-    dot.setAttribute("r", "2.4");
+    dot.setAttribute("r", "2.6");
     svg.appendChild(dot);
     wrap.appendChild(svg);
+    wrap.appendChild(el(
+      "p",
+      "lab-spark-caption",
+      api.fmtDate(points[0].date, true) + " \u2013 " + api.fmtDate(points[points.length - 1].date, true)
+    ));
     return wrap;
   }
 
@@ -190,6 +215,9 @@
     var title = el("h3", null, marker.name);
     var slug = marker.key.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "marker";
     title.id = "lab-marker-" + slug;
+    if (marker.latest.origName && marker.latest.origName !== marker.name) {
+      title.title = marker.latest.origName;
+    }
     top.appendChild(title);
     if (status && status.label && status.code !== "unusable") {
       var pill = el("p", "lab-status " + (status.code === "in" ? "is-in" : "is-out"));
@@ -197,39 +225,183 @@
       if (status.code === "above") pill.appendChild(el("span", "sr-only", ", above the printed high"));
       if (status.code === "below") pill.appendChild(el("span", "sr-only", ", below the printed low"));
       top.appendChild(pill);
+    } else if (marker.flag) {
+      var flagged = el("p", "lab-status is-out");
+      flagged.appendChild(document.createTextNode(marker.flag));
+      flagged.appendChild(el("span", "sr-only", ", flagged on the report"));
+      top.appendChild(flagged);
     }
     card.appendChild(top);
     card.setAttribute("aria-labelledby", title.id);
 
-    var value = el("div", "lab-value", api.fmtNum(marker.latest.value, api.decimalPlaces(marker.latest.value)));
+    var value = el("div", "lab-value", api.displayValue(marker.latest));
     if (marker.latest.unit) value.appendChild(el("span", "unit", marker.latest.unit));
     card.appendChild(value);
 
     var meta = api.fmtDate(marker.latest.date, true);
     if (marker.latest.source) meta += " \u00b7 " + marker.latest.source;
+    if (marker.points.length > 1) {
+      meta += " \u00b7 " + marker.points.length + " results";
+    }
     card.appendChild(el("p", "lab-meta", meta));
     card.appendChild(el("p", "lab-delta", marker.deltaText));
-    var spark = sparkline(marker);
-    if (spark) card.appendChild(spark);
+    if (marker.flag && status && status.code !== "unusable") {
+      card.appendChild(el("p", "lab-flag", "Report flag: " + marker.flag));
+    }
+    if (marker.trend) card.appendChild(sparkline(marker));
     if (marker.rangeText) card.appendChild(el("p", "lab-range", marker.rangeText));
     if (marker.general) card.appendChild(el("p", "lab-general", marker.general));
     return card;
   }
 
-  function renderPopulated(body, model) {
-    var grid = el("div", "lab-grid");
-    grid.setAttribute("role", "list");
-    grid.setAttribute("aria-label", "Lab markers");
-    model.markers.forEach(function (marker) {
-      grid.appendChild(markerCard(marker));
+  function markerHistory(marker) {
+    var details = el("details", "lab-marker-history");
+    details.setAttribute("data-name", marker.key);
+    details.setAttribute("data-orig", marker.origSearch || "");
+    var summary = document.createElement("summary");
+    summary.appendChild(el("span", "lab-hist-name", marker.name));
+    var latestBits = api.displayValue(marker.latest);
+    if (marker.latest.unit) latestBits += " " + marker.latest.unit;
+    latestBits += " \u00b7 " + api.fmtDate(marker.latest.date, true);
+    if (marker.flag) latestBits += " \u00b7 " + marker.flag;
+    summary.appendChild(el("span", "lab-hist-latest", latestBits));
+    details.appendChild(summary);
+
+    var wrap = el("div", "table-wrap");
+    var table = document.createElement("table");
+    table.className = "lab-hist-table";
+    var cap = document.createElement("caption");
+    cap.className = "sr-only";
+    cap.textContent = marker.name + " results, newest first";
+    table.appendChild(cap);
+    var thead = document.createElement("thead");
+    var hr = document.createElement("tr");
+    ["Date", "Result", "Flag", "Reference"].forEach(function (label) {
+      var th = document.createElement("th");
+      th.scope = "col";
+      th.textContent = label;
+      hr.appendChild(th);
     });
-    body.appendChild(grid);
-    if (model.draws.length) {
-      var listed = model.draws.map(function (d) {
-        return api.fmtDate(d.date, true) + (d.source ? " (" + d.source + ")" : "");
-      }).join("; ");
-      body.appendChild(el("p", "lab-draws", "Draws entered: " + listed + "."));
+    thead.appendChild(hr);
+    table.appendChild(thead);
+    var tb = document.createElement("tbody");
+    var rows = marker.points.slice().reverse();
+    rows.forEach(function (p) {
+      var tr = document.createElement("tr");
+      function td(text) {
+        var cell = document.createElement("td");
+        cell.textContent = text;
+        return cell;
+      }
+      var result = api.displayValue(p);
+      if (p.unit) result += " " + p.unit;
+      tr.appendChild(td(api.fmtDate(p.date, true) || p.date));
+      tr.appendChild(td(result));
+      tr.appendChild(td(p.flag || ""));
+      tr.appendChild(td(api.rangeText(p.refLow, p.refHigh, p.unit)));
+      tb.appendChild(tr);
+    });
+    table.appendChild(tb);
+    wrap.appendChild(table);
+    details.appendChild(wrap);
+    return details;
+  }
+
+  function historyBlock(model) {
+    var details = el("details", "lab-history");
+    var summary = document.createElement("summary");
+    var first = model.draws[0];
+    var last = model.draws[model.draws.length - 1];
+    summary.textContent = "Full history \u00b7 " + model.resultCount + " results \u00b7 " +
+      model.draws.length + " draws \u00b7 " +
+      api.fmtDate(first.date, true) + " \u2013 " + api.fmtDate(last.date, true);
+    details.appendChild(summary);
+
+    var tools = el("div", "lab-history-tools");
+    var input = document.createElement("input");
+    input.type = "search";
+    input.className = "lab-filter";
+    input.placeholder = "Filter markers";
+    input.setAttribute("aria-label", "Filter lab markers by name");
+    tools.appendChild(input);
+    details.appendChild(tools);
+
+    var list = el("div", "lab-history-list");
+    var rows = [];
+    function addHeading(text) {
+      list.appendChild(el("p", "lab-history-label", text));
     }
+    if (model.keyHistory.length) addHeading("Key markers");
+    model.keyHistory.forEach(function (marker) {
+      var item = markerHistory(marker);
+      rows.push(item);
+      list.appendChild(item);
+    });
+    if (model.otherHistory.length) addHeading("Other results");
+    model.otherHistory.forEach(function (marker) {
+      var item = markerHistory(marker);
+      rows.push(item);
+      list.appendChild(item);
+    });
+    var empty = el("p", "lab-filter-empty", "No markers match that filter.");
+    empty.hidden = true;
+    input.addEventListener("input", function () {
+      var q = input.value.trim().toLowerCase();
+      var shown = 0;
+      rows.forEach(function (row) {
+        var hay = (row.getAttribute("data-name") || "") + " " + (row.getAttribute("data-orig") || "");
+        var hide = !!q && hay.indexOf(q) === -1;
+        row.hidden = hide;
+        if (!hide) shown += 1;
+      });
+      var labels = list.querySelectorAll(".lab-history-label");
+      labels.forEach(function (label) {
+        var sib = label.nextElementSibling;
+        var any = false;
+        while (sib && !sib.classList.contains("lab-history-label")) {
+          if (!sib.hidden) any = true;
+          sib = sib.nextElementSibling;
+        }
+        label.hidden = !any;
+      });
+      empty.hidden = shown !== 0;
+    });
+    details.appendChild(list);
+    details.appendChild(empty);
+    return details;
+  }
+
+  function renderPopulated(body, model) {
+    (model.keyGroups || []).forEach(function (group) {
+      if (!group.markers.length) return;
+      var block = el("div", "lab-group");
+      block.appendChild(el("h3", "lab-group-title", group.label));
+      var grid = el("div", "lab-grid");
+      grid.setAttribute("role", "list");
+      grid.setAttribute("aria-label", group.label);
+      group.markers.forEach(function (marker) {
+        grid.appendChild(markerCard(marker));
+      });
+      block.appendChild(grid);
+      body.appendChild(block);
+    });
+
+    var noted = (model.draws || []).filter(function (d) { return d.note; });
+    if (noted.length) {
+      var notes = el("div", "lab-notes");
+      notes.appendChild(el("h3", "lab-group-title", "Draw notes"));
+      var ul = document.createElement("ul");
+      noted.forEach(function (d) {
+        var li = document.createElement("li");
+        li.appendChild(el("span", "lab-note-date", api.fmtDate(d.date, true)));
+        li.appendChild(document.createTextNode(" " + d.note));
+        ul.appendChild(li);
+      });
+      notes.appendChild(ul);
+      body.appendChild(notes);
+    }
+
+    if (model.draws.length && model.markers.length) body.appendChild(historyBlock(model));
   }
 
   function ensureWeightNote() {
@@ -241,7 +413,7 @@
       return;
     }
     if (!note) {
-      note = el("p", "chart-band-note", "Dots on this chart mark a lab draw when its date falls in the selected range.");
+      note = el("p", "chart-band-note", "Dots on this chart mark a lab draw only when its date is inside the dates plotted here. Older draws stay in Metabolic labs and do not extend this chart.");
       note.id = "labDrawNote";
       var trend = document.getElementById("chartWeightTrend");
       var wrap = canvas.closest(".chart-wrap");
@@ -328,8 +500,14 @@
   "use strict";
 
   var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-  var MARKER_WINDOW_DAYS = 21;
   var EMPTY_DELTA = "No prior draw";
+  var KEY_GROUPS = [
+    { id: "a1c-glucose", label: "HbA1c and glucose", keys: ["hba1c", "glucose"] },
+    { id: "lipids", label: "Lipids", keys: ["total cholesterol", "ldl-c (calc)", "hdl-c", "triglycerides"] },
+    { id: "cbc", label: "Blood count", keys: ["hemoglobin", "mcv", "rdw"] },
+    { id: "kidney", label: "Kidney", keys: ["creatinine", "egfr"] },
+    { id: "liver", label: "Liver", keys: ["alt", "ast"] }
+  ];
 
   function num(v) {
     if (typeof v === "number" && isFinite(v)) return v;
@@ -359,6 +537,15 @@
     });
   }
 
+  function displayValue(point) {
+    if (!point) return "\u2014";
+    if (point.value !== null && point.value !== undefined && isFinite(point.value)) {
+      return fmtNum(point.value, decimalPlaces(point.value));
+    }
+    if (typeof point.text === "string" && point.text) return point.text;
+    return "\u2014";
+  }
+
   function validDate(iso) {
     if (typeof iso !== "string" || !DATE_RE.test(iso)) return false;
     var d = new Date(iso + "T12:00:00");
@@ -384,9 +571,9 @@
     return Math.round((b - a) / 86400000);
   }
 
-  function markerKey(name) {
-    return String(name || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
-  }
+function markerKey(name) {
+  return String(name || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
 
   function normalizeUnit(unit) {
     return String(unit || "").trim().toLowerCase().replace(/\s+/g, "");
@@ -404,6 +591,12 @@
     return key.indexOf("fasting") !== -1 && (key.indexOf("glucose") !== -1 || key.indexOf("blood sugar") !== -1);
   }
 
+  function isSerumGlucose(key) {
+    if (!key || key.indexOf("urine") !== -1) return false;
+    if (isFastingGlucose(key)) return true;
+    return key === "glucose" || key === "serum glucose" || key === "plasma glucose" || key === "blood glucose";
+  }
+
   function generalRef(name, unit) {
     var key = markerKey(name);
     var u = normalizeUnit(unit);
@@ -415,7 +608,7 @@
       }
       return a1c;
     }
-    if (isFastingGlucose(key)) {
+    if (isSerumGlucose(key)) {
       var glu = "General reference, not a diagnosis. ADA describes fasting glucose of 100\u2013125 mg/dL as the prediabetes range.";
       if (u && u !== "mg/dl") {
         glu += " This result is in " + printed + ", so that mg/dL band is not applied to the number above.";
@@ -459,6 +652,12 @@
 
   function deltaText(latest, prior) {
     if (!prior) return EMPTY_DELTA;
+    var latestNum = latest.value !== null && isFinite(latest.value);
+    var priorNum = prior.value !== null && isFinite(prior.value);
+    if (!latestNum || !priorNum) {
+      var priorShown = displayValue(prior) + (prior.unit ? " " + prior.unit : "");
+      return "Prior result on " + fmtDate(prior.date, true) + ": " + priorShown;
+    }
     if (!sameUnit(latest.unit, prior.unit)) {
       return "Prior result on " + fmtDate(prior.date, true) + " used a different unit";
     }
@@ -472,18 +671,31 @@
     return (rounded > 0 ? "+" : "\u2212") + body + unit + " vs " + when;
   }
 
+  function cleanFlag(v) {
+    if (typeof v !== "string") return "";
+    return v.trim();
+  }
+
   function cleanMarker(raw) {
     if (!raw || typeof raw !== "object") return null;
     var name = typeof raw.name === "string" ? raw.name.trim() : "";
-    var value = num(raw.value);
-    if (!name || value === null) return null;
+    if (!name) return null;
+    var value = null;
+    var text = null;
+    if (typeof raw.value === "number" && isFinite(raw.value)) value = raw.value;
+    else if (typeof raw.value === "string" && raw.value.trim()) text = raw.value;
+    else return null;
     var unit = typeof raw.unit === "string" ? raw.unit.trim() : "";
+    var origName = typeof raw.origName === "string" ? raw.origName.trim() : "";
     return {
       name: name,
       value: value,
+      text: text,
       unit: unit,
       refLow: bound(raw.refLow),
-      refHigh: bound(raw.refHigh)
+      refHigh: bound(raw.refHigh),
+      flag: cleanFlag(raw.flag),
+      origName: origName
     };
   }
 
@@ -500,9 +712,11 @@
         });
       }
       if (!markers.length) return;
+      var note = typeof row.note === "string" ? row.note.trim() : "";
       entries.push({
         date: row.date,
         source: typeof row.source === "string" ? row.source.trim() : "",
+        note: note,
         markers: markers,
         index: index
       });
@@ -513,6 +727,32 @@
       return a.index - b.index;
     });
     return entries;
+  }
+
+  function seriesMarker(series) {
+    var latest = series.points[series.points.length - 1];
+    var prior = series.points.length > 1 ? series.points[series.points.length - 2] : null;
+    var origSeen = Object.create(null);
+    var origs = [];
+    series.points.forEach(function (p) {
+      if (!p.origName || origSeen[p.origName]) return;
+      origSeen[p.origName] = true;
+      origs.push(p.origName);
+    });
+    return {
+      key: series.key,
+      name: series.name,
+      points: series.points,
+      latest: latest,
+      prior: prior,
+      status: rangeStatus(latest.value, latest.refLow, latest.refHigh),
+      flag: latest.flag || "",
+      rangeText: rangeText(latest.refLow, latest.refHigh, latest.unit),
+      deltaText: deltaText(latest, prior),
+      general: generalRef(series.name, latest.unit),
+      trend: isA1c(series.key) || isSerumGlucose(series.key),
+      origSearch: origs.join(" ").toLowerCase()
+    };
   }
 
   function buildModel(raw) {
@@ -528,99 +768,113 @@
         }
         var pts = map[key].points;
         var last = pts[pts.length - 1];
-        if (last && last.date === entry.date) pts.pop();
+        if (last && last.date === entry.date) return;
         pts.push({
           date: entry.date,
           source: entry.source,
+          note: entry.note,
           value: m.value,
+          text: m.text,
           unit: m.unit,
           refLow: m.refLow,
           refHigh: m.refHigh,
-          name: m.name
+          flag: m.flag,
+          name: m.name,
+          origName: m.origName
         });
         map[key].name = m.name;
       });
     });
 
-    var latestKeys = [];
-    if (entries.length) {
-      entries[entries.length - 1].markers.forEach(function (m) {
-        var key = markerKey(m.name);
-        if (latestKeys.indexOf(key) === -1) latestKeys.push(key);
-      });
-    }
-    var ordered = [];
-    var used = Object.create(null);
-    latestKeys.concat(seenOrder).forEach(function (key) {
-      if (used[key] || !map[key]) return;
-      used[key] = true;
-      ordered.push(map[key]);
-    });
+    var markers = seenOrder.map(function (key) { return seriesMarker(map[key]); });
+    var byKey = Object.create(null);
+    markers.forEach(function (marker) { byKey[marker.key] = marker; });
 
-    var markers = ordered.map(function (series) {
-      var latest = series.points[series.points.length - 1];
-      var prior = series.points.length > 1 ? series.points[series.points.length - 2] : null;
+    var keyGroups = KEY_GROUPS.map(function (group) {
       return {
-        key: series.key,
-        name: series.name,
-        points: series.points,
-        latest: latest,
-        prior: prior,
-        status: rangeStatus(latest.value, latest.refLow, latest.refHigh),
-        rangeText: rangeText(latest.refLow, latest.refHigh, latest.unit),
-        deltaText: deltaText(latest, prior),
-        general: generalRef(series.name, latest.unit)
+        id: group.id,
+        label: group.label,
+        markers: group.keys.map(function (key) { return byKey[key]; }).filter(Boolean)
       };
+    }).filter(function (group) { return group.markers.length; });
+
+    var keyOrder = [];
+    KEY_GROUPS.forEach(function (group) {
+      group.keys.forEach(function (key) { keyOrder.push(key); });
+    });
+    var keySet = Object.create(null);
+    keyOrder.forEach(function (key) { keySet[key] = true; });
+    var keyHistory = keyOrder.map(function (key) { return byKey[key]; }).filter(Boolean);
+    var otherHistory = markers.filter(function (marker) { return !keySet[marker.key]; }).sort(function (a, b) {
+      return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
     });
 
     var drawMap = Object.create(null);
     var drawOrder = [];
     entries.forEach(function (entry) {
       if (!drawMap[entry.date]) {
-        drawMap[entry.date] = { date: entry.date, source: entry.source };
+        drawMap[entry.date] = { date: entry.date, source: entry.source, note: entry.note || "" };
         drawOrder.push(entry.date);
-      } else if (entry.source && drawMap[entry.date].source.indexOf(entry.source) === -1) {
-        drawMap[entry.date].source = drawMap[entry.date].source
-          ? drawMap[entry.date].source + ", " + entry.source
-          : entry.source;
+      } else {
+        if (entry.source && drawMap[entry.date].source.indexOf(entry.source) === -1) {
+          drawMap[entry.date].source = drawMap[entry.date].source
+            ? drawMap[entry.date].source + ", " + entry.source
+            : entry.source;
+        }
+        if (entry.note && drawMap[entry.date].note.indexOf(entry.note) === -1) {
+          drawMap[entry.date].note = drawMap[entry.date].note
+            ? drawMap[entry.date].note + " " + entry.note
+            : entry.note;
+        }
       }
     });
 
+    var resultCount = 0;
+    markers.forEach(function (marker) { resultCount += marker.points.length; });
+
     return {
       draws: drawOrder.map(function (d) { return drawMap[d]; }),
-      markers: markers
+      markers: markers,
+      keyGroups: keyGroups,
+      keyHistory: keyHistory,
+      otherHistory: otherHistory,
+      resultCount: resultCount
     };
   }
 
   function sparkSummary(marker) {
     var bits = marker.points.map(function (p) {
-      return fmtNum(p.value, decimalPlaces(p.value)) + (p.unit ? " " + p.unit : "") + " on " + fmtDate(p.date, true);
+      var bit = displayValue(p) + (p.unit ? " " + p.unit : "") + " on " + fmtDate(p.date, true);
+      if (p.flag) bit += ", flag " + p.flag;
+      return bit;
     });
-    return marker.name + " across " + marker.points.length + " draw" + (marker.points.length === 1 ? "" : "s") + ": " + bits.join(", ") + ".";
+    return marker.name + " across " + marker.points.length + " result" + (marker.points.length === 1 ? "" : "s") + ": " + bits.join(", ") + ".";
   }
 
   function visibleDraws(labels, list) {
     if (!labels || !labels.length || !list || !list.length) return [];
-    var sorted = labels.slice().filter(function (d) { return DATE_RE.test(d); }).sort();
-    if (!sorted.length) return [];
-    var first = sorted[0];
-    var last = sorted[sorted.length - 1];
+    var minL = null;
+    var maxL = null;
+    labels.forEach(function (d) {
+      if (!DATE_RE.test(d)) return;
+      if (minL === null || d < minL) minL = d;
+      if (maxL === null || d > maxL) maxL = d;
+    });
+    if (minL === null) return [];
     return list.filter(function (d) {
-      if (!d || !DATE_RE.test(d.date)) return false;
-      if (d.date >= first && d.date <= last) return true;
-      if (d.date < first) return daysBetween(d.date, first) <= MARKER_WINDOW_DAYS;
-      return daysBetween(last, d.date) <= MARKER_WINDOW_DAYS;
+      return d && DATE_RE.test(d.date) && d.date >= minL && d.date <= maxL;
     });
   }
 
   return {
     DATE_RE: DATE_RE,
-    MARKER_WINDOW_DAYS: MARKER_WINDOW_DAYS,
     buildModel: buildModel,
     rangeStatus: rangeStatus,
+    rangeText: rangeText,
     generalRef: generalRef,
     markerKey: markerKey,
     visibleDraws: visibleDraws,
+    displayValue: displayValue,
     fmtDate: fmtDate,
     fmtNum: fmtNum,
     decimalPlaces: decimalPlaces,
