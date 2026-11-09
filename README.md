@@ -57,15 +57,16 @@ Optional segmental-scale fields. Leave unknown values out. Do not estimate them.
 
 ### Labs in `data.json`
 
-Optional top-level `labs` array. It ships empty. Missing `labs` is the same as `[]`: the dashboard shows an empty state and does not error. Do not estimate or prefill values. When appending a Saturday scan, leave `labs` as it is. Do not copy lab numbers onto scans.
+Top-level `labs` array. It currently holds the VA Blue Button draws (`source` `VA`) copied from the printed report, including string results, null reference bounds, report flags, and draw notes. Missing `labs` is the same as `[]`: the dashboard shows an empty state and does not error. Do not estimate or recompute values. When appending a Saturday scan, leave `labs` as it is. Do not copy lab numbers onto scans. Add a draw only from a printed report.
 
-Each entry, once a printed report is in hand:
+Each entry:
 
 - `date` — draw date, `YYYY-MM-DD`
 - `source` — where the report came from, such as `VA`
-- `markers[]` — `name`, `value`, `unit`, `refLow`, `refHigh` exactly as printed. Omit a bound the report does not print.
+- `note` — optional note printed with that draw. Omit it when the report has none.
+- `markers[]` — `name`, `origName`, `value`, `unit`, `refLow`, `refHigh`, `flag` exactly as printed. `value` may be a number or a string such as `NEGATIVE` or `<0.10`. A bound the report does not print is `null`. `flag` is the report flag (`High`, `Low`) or `null`.
 
-The dashboard compares a value only to the low and high stored on that result. HbA1c and fasting glucose also show the published ADA bands, labeled as general reference, not a diagnosis. The section is not a diagnosis and does not advise on medication.
+The dashboard compares a numeric value only to the low and high stored on that result. String values are shown as printed. HbA1c and glucose also show the published ADA bands, labeled as general reference, not a diagnosis. The section shows the latest result for the key metabolic markers and keeps the full history collapsed. Dots on the weight chart appear only when a draw date sits inside the dates already plotted there. The section is not a diagnosis and does not advise on medication.
 
 ## How to read this
 
