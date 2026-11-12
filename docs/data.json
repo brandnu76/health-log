@@ -1,5 +1,309 @@
 {"meta":{"title":"Brandon's Health Log","subtitle":"Council of Health · private tracking","owner":"Brandon Carroll","copyright":"© 2026 Brandon Carroll. All rights reserved.","rights":"Proprietary. No license to copy, scrape, republish, redistribute, or create derivative works without prior written permission.","subject":{"sex":"male","age":50,"device":"Fitdays+","heightIn":67},"disclaimer":"Personal wellness tracking only — not medical advice. Body composition estimates vary by device and conditions.","visceralReference":{"healthy":"1–12","excess":"13+","higherRisk":"15+","note":"Tanita-style visceral fat rating scale"},"devices":[{"id":"fitdays","label":"Fitdays+","kind":"foot-bia","through":"2026-11-01","note":"Foot-only BIA. 28 scans through 2026-11-01."},{"id":"segmental","label":"Segmental scale","kind":"segmental-bia","from":"2026-11-06","current":true,"firstOfficial":"2026-11-07","note":"Brand not recorded. Segmental BIA. First official reading is the Saturday 2026-11-07 morning scan. The 2026-11-05 22:33 reading was an evening test and is not a scan."}]},"goals":{"items":["+20 lb lean mass","15–20% body fat","Metabolic health","Longevity"],"notes":["Device ideal weight of 140.2 lb is discarded — not a useful target for this build or goals.","Body composition is not trended across scales. Fitdays+ ended 2026-11-01. The segmental scale (brand not recorded) starts 2026-11-06 and is a new baseline."],"targets":{"bfBandMin":15,"bfBandMax":20,"bfUpperTarget":20,"bfStretch":15,"visceralHealthyMax":12,"visceralExcess":13,"visceralHigherRisk":15,"leanGainLb":20,"leanMetric":"lbm","cutStart":"2026-08-08","whtrTarget":0.5,"goalWeightLb":170,"checkpointWeightLb":185,"scanTimeTarget":"06:30"}},"program":{"name":"VA MOVE!","startDate":"2025-05-30","startWeightLb":241,"medication":"Wegovy (semaglutide)","medicationStartDate":"2026-03-16","medicationNote":"Dose managed by VA pharmacist; currently max dose; may taper to maintenance at goal. Council does not advise on dosing.","goalNote":"Goal 170 lb with 185 lb checkpoint, conditional on preserving lean (~134 lb LBM) and waist under 33.5 in (WHtR under 0.5).","clinicWeighIns":[{"date":"2025-05-30","weightLb":241,"source":"VA clinic"},{"date":"2026-10-08","weightLb":201.6,"source":"VA clinic"}]},"scans":[{"muscleMassApprox":true,"labelUncertain":true,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"id":"2026-02-01","date":"2026-02-01","label":"Baseline","weight":216,"bf":35.5,"fatMass":76.7,"visceral":17.8,"bodyAge":54,"lbm":null,"muscleMass":131,"muscleRate":null,"skeletalMusclePct":null,"subqFat":null,"bodyWater":null,"proteinPct":null,"bone":null,"bmr":null,"bmi":null,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"id":"2026-03-07","date":"2026-03-07","label":"Full scan","weight":221.4,"bmi":34.7,"bf":36.1,"fatMass":79.9,"visceral":18.2,"bodyAge":55,"lbm":141.6,"muscleMass":132.5,"muscleRate":59.9,"skeletalMusclePct":43.9,"subqFat":23.4,"bodyWater":45.6,"proteinPct":15.0,"bone":7.3,"bmr":1857,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"id":"2026-03-14","date":"2026-03-14","label":"Full scan","weight":219.4,"bmi":34.4,"bf":35.9,"fatMass":78.8,"visceral":18.0,"bodyAge":54,"lbm":140.7,"muscleMass":131.8,"muscleRate":60.1,"skeletalMusclePct":44.1,"subqFat":23.2,"bodyWater":45.7,"proteinPct":15.1,"bone":7.3,"bmr":1845,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"id":"2026-03-21","date":"2026-03-21","label":"Full scan","weight":219.8,"bmi":34.5,"bf":35.9,"fatMass":78.9,"visceral":18.1,"bodyAge":54,"lbm":140.9,"muscleMass":132.1,"muscleRate":60.1,"skeletalMusclePct":44.0,"subqFat":23.3,"bodyWater":45.6,"proteinPct":15.1,"bone":7.3,"bmr":1847,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"id":"2026-03-28","date":"2026-03-28","label":"Full scan","weight":221.0,"bmi":34.7,"bf":36.1,"fatMass":79.8,"visceral":18.2,"bodyAge":55,"lbm":141.2,"muscleMass":132.3,"muscleRate":59.9,"skeletalMusclePct":44.0,"subqFat":23.4,"bodyWater":45.6,"proteinPct":15.0,"bone":7.3,"bmr":1853,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"muscleRate":60.2,"skeletalMusclePct":44.2,"subqFat":23.2,"bodyWater":45.7,"proteinPct":15.2,"bone":7.3,"bmr":1839,"bmi":34.3,"lbm":140.3,"muscleMass":131.6,"visceral":18.0,"bodyAge":54,"weight":218.6,"bf":35.8,"fatMass":78.3,"id":"2026-04-18","date":"2026-04-18","label":"Full scan","device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"muscleRate":60.4,"skeletalMusclePct":44.3,"subqFat":23.1,"bodyWater":45.9,"proteinPct":15.2,"bone":7.1,"bmr":1831,"bmi":34.0,"lbm":139.8,"muscleMass":131.0,"visceral":17.8,"bodyAge":54,"weight":217.0,"bf":35.6,"fatMass":77.3,"id":"2026-04-25","date":"2026-04-25","label":"Full scan","device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"muscleRate":60.0,"skeletalMusclePct":44.0,"subqFat":23.3,"bodyWater":45.6,"proteinPct":15.1,"bone":7.3,"bmr":1848,"bmi":34.5,"lbm":140.9,"muscleMass":132.1,"visceral":18.1,"bodyAge":54,"weight":220.0,"bf":36.0,"fatMass":79.2,"id":"2026-05-02","date":"2026-05-02","label":"Full scan","device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"muscleRate":60.6,"skeletalMusclePct":44.4,"subqFat":23.0,"bodyWater":45.9,"proteinPct":15.3,"bone":7.3,"bmr":1821,"bmi":33.8,"lbm":139.1,"muscleMass":130.5,"visceral":17.7,"bodyAge":54,"weight":215.4,"bf":35.4,"fatMass":76.3,"id":"2026-05-09","date":"2026-05-09","label":"Full scan","device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"muscleRate":60.2,"skeletalMusclePct":44.2,"subqFat":23.2,"bodyWater":45.7,"proteinPct":15.2,"bone":7.3,"bmr":1839,"bmi":34.3,"lbm":140.1,"muscleMass":131.6,"visceral":18.0,"bodyAge":54,"weight":218.4,"bf":35.8,"fatMass":78.2,"id":"2026-05-16","date":"2026-05-16","label":"Full scan","device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"muscleRate":60.4,"skeletalMusclePct":44.3,"subqFat":23.1,"bodyWater":45.8,"proteinPct":15.2,"bone":7.3,"bmr":1831,"bmi":34.1,"lbm":139.6,"muscleMass":131.2,"visceral":17.9,"bodyAge":54,"weight":217.0,"bf":35.6,"fatMass":77.3,"id":"2026-05-23","date":"2026-05-23","label":"Full scan","device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"id":"2026-06-06","date":"2026-06-06","label":"Full scan","weight":214.6,"bmi":33.7,"bf":35.3,"fatMass":75.8,"visceral":17.6,"bodyAge":54,"lbm":139.0,"muscleMass":130.3,"muscleRate":60.7,"skeletalMusclePct":44.5,"subqFat":22.9,"bodyWater":45.9,"proteinPct":15.4,"bone":7.3,"bmr":1815,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"id":"2026-06-20","date":"2026-06-20","label":"Full scan","weight":214.0,"bmi":33.6,"bf":35.2,"fatMass":75.3,"visceral":17.5,"bodyAge":54,"lbm":138.8,"muscleMass":130.1,"muscleRate":60.8,"skeletalMusclePct":44.6,"subqFat":22.8,"bodyWater":46.1,"proteinPct":15.4,"bone":7.3,"bmr":1813,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"id":"2026-07-11","date":"2026-07-11","label":"Full scan","weight":212.6,"bmi":33.4,"bf":35.0,"fatMass":74.4,"visceral":17.4,"bodyAge":54,"lbm":138.1,"muscleMass":129.6,"muscleRate":60.9,"skeletalMusclePct":44.7,"subqFat":22.8,"bodyWater":46.2,"proteinPct":15.4,"bone":7.3,"bmr":1806,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"id":"2026-07-18","date":"2026-07-18","label":"Full scan","weight":212.0,"bmi":33.3,"bf":35.0,"fatMass":74.2,"visceral":17.4,"bodyAge":54,"lbm":137.7,"muscleMass":129.4,"muscleRate":61.0,"skeletalMusclePct":44.7,"subqFat":22.7,"bodyWater":46.2,"proteinPct":15.5,"bone":7.3,"bmr":1802,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"id":"2026-08-08","date":"2026-08-08","label":"Full scan","weight":209.4,"bmi":32.9,"bf":34.6,"fatMass":72.5,"visceral":17.1,"bodyAge":54,"lbm":136.9,"muscleMass":128.3,"muscleRate":61.3,"skeletalMusclePct":45.0,"subqFat":22.5,"bodyWater":46.5,"proteinPct":15.6,"bone":7.1,"bmr":1788,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"id":"2026-08-15","date":"2026-08-15","label":"Full scan","weight":207.4,"bmi":32.5,"bf":34.3,"fatMass":71.1,"visceral":16.9,"bodyAge":54,"lbm":136.4,"muscleMass":127.6,"muscleRate":61.6,"skeletalMusclePct":45.2,"subqFat":22.3,"bodyWater":46.6,"proteinPct":15.7,"bone":7.1,"bmr":1775,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"id":"2026-08-22","date":"2026-08-22","label":"Full scan","weight":205.6,"bmi":32.3,"bf":34.1,"fatMass":70.1,"visceral":16.7,"bodyAge":54,"lbm":135.5,"muscleMass":127.2,"muscleRate":61.8,"skeletalMusclePct":45.3,"subqFat":22.2,"bodyWater":46.7,"proteinPct":15.8,"bone":7.1,"bmr":1765,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":10.4,"partial":true,"fatMassCalc":false,"id":"2026-08-24","date":"2026-08-24","label":"Partial","weight":null,"bf":null,"fatMass":null,"visceral":null,"bodyAge":null,"lbm":null,"muscleMass":null,"muscleRate":null,"skeletalMusclePct":null,"subqFat":null,"bodyWater":null,"proteinPct":null,"bone":null,"bmr":null,"bmi":null,"fatLossNoteVs":"2026-02-01","device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":null,"proteinMass":null,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":true,"id":"2026-08-29","date":"2026-08-29","label":"Full scan","weight":206.6,"bmi":32.4,"bf":34.2,"fatMass":70.7,"visceral":16.8,"bodyAge":54,"lbm":136.1,"muscleMass":127.4,"muscleRate":61.7,"skeletalMusclePct":45.3,"subqFat":22.3,"bodyWater":46.7,"proteinPct":15.7,"bone":7.1,"bmr":1771,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":95.2,"proteinMass":32.4,"idealWeightIgnore":140.2,"fatLossNote":null,"partial":false,"fatMassCalc":false,"id":"2026-09-13","date":"2026-09-13","label":"Full scan","weight":204.0,"bmi":32.0,"bf":33.9,"fatMass":69.2,"visceral":16.6,"bodyAge":53,"lbm":134.8,"muscleMass":126.3,"muscleRate":62.0,"skeletalMusclePct":45.5,"subqFat":22.1,"bodyWater":46.7,"proteinPct":15.9,"bone":6.8,"bmr":1754,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":95.0,"proteinMass":32.2,"idealWeightIgnore":140.2,"fatLossNote":null,"partial":false,"fatMassCalc":false,"id":"2026-09-19","date":"2026-09-19","label":"Full scan","weight":201.6,"bmi":31.7,"bf":33.5,"fatMass":67.7,"visceral":16.4,"bodyAge":53,"lbm":133.9,"muscleMass":125.9,"muscleRate":62.4,"skeletalMusclePct":45.7,"subqFat":21.9,"bodyWater":47.1,"proteinPct":16.0,"bone":7.1,"bmr":1743,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":95.0,"proteinMass":32.4,"idealWeightIgnore":140.2,"fatLossNote":null,"partial":false,"fatMassCalc":false,"id":"2026-09-26","date":"2026-09-26","label":"Full scan","weight":202.4,"bmi":31.8,"bf":33.6,"fatMass":67.9,"visceral":16.4,"bodyAge":53,"lbm":134.5,"muscleMass":126.1,"muscleRate":62.3,"skeletalMusclePct":45.7,"subqFat":21.9,"bodyWater":47.0,"proteinPct":16.0,"bone":7.1,"bmr":1746,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":94.6,"proteinMass":32.4,"idealWeightIgnore":140.2,"fatLossNote":null,"partial":false,"fatMassCalc":false,"id":"2026-10-03","date":"2026-10-03","label":"Full scan","weight":200.8,"bmi":31.5,"bf":33.3,"fatMass":66.8,"visceral":16.3,"bodyAge":53,"lbm":134.0,"muscleMass":125.4,"muscleRate":62.5,"skeletalMusclePct":45.8,"subqFat":21.8,"bodyWater":47.1,"proteinPct":16.1,"bone":7.1,"bmr":1737,"waistIn":36.625,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":93.9,"proteinMass":32.2,"idealWeightIgnore":140.2,"fatLossNote":null,"partial":false,"fatMassCalc":false,"id":"2026-10-10","date":"2026-10-10","label":"Full scan","weight":199.0,"bmi":31.2,"bf":33.1,"fatMass":65.9,"visceral":16.2,"bodyAge":53,"lbm":133.1,"muscleMass":124.8,"muscleRate":62.7,"skeletalMusclePct":46.0,"subqFat":21.7,"bodyWater":47.2,"proteinPct":16.2,"bone":7.1,"bmr":1726,"waistIn":36.32,"device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":94.8,"proteinMass":32.4,"idealWeightIgnore":140.2,"fatLossNote":null,"partial":false,"fatMassCalc":false,"id":"2026-10-17","date":"2026-10-17","label":"Full scan","weight":201.2,"bmi":31.6,"bf":33.4,"fatMass":67.2,"visceral":16.3,"bodyAge":53,"lbm":134.0,"muscleMass":125.4,"muscleRate":62.4,"skeletalMusclePct":45.8,"subqFat":21.8,"bodyWater":47.1,"proteinPct":16.1,"bone":7.1,"bmr":1738,"waistIn":36.32,"scanTime":"09:12","device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":94.4,"proteinMass":32.2,"idealWeightIgnore":140.2,"fatLossNote":null,"partial":false,"fatMassCalc":false,"id":"2026-10-24","date":"2026-10-24","label":"Full scan","weight":200.0,"bmi":31.4,"bf":33.2,"fatMass":66.4,"visceral":16.2,"bodyAge":53,"lbm":133.6,"muscleMass":125.2,"muscleRate":62.6,"skeletalMusclePct":45.9,"subqFat":21.7,"bodyWater":47.2,"proteinPct":16.1,"bone":7.1,"bmr":1732,"waistIn":35.99,"scanTime":"09:47","device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":94.6,"proteinMass":32.2,"idealWeightIgnore":140.2,"fatLossNote":null,"partial":false,"fatMassCalc":false,"id":"2026-11-01","date":"2026-11-01","label":"Full scan","weight":200.2,"bmi":31.4,"bf":33.2,"fatMass":66.4,"visceral":16.2,"bodyAge":53,"lbm":133.8,"muscleMass":125.2,"muscleRate":62.6,"skeletalMusclePct":45.9,"subqFat":21.7,"bodyWater":47.2,"proteinPct":16.1,"bone":7.1,"bmr":1734,"waistIn":36.58,"scanTime":"10:48","device":"fitdays"},{"muscleMassApprox":false,"labelUncertain":false,"waterWeight":108.2,"proteinMass":29.3,"idealWeightIgnore":null,"fatLossNote":null,"partial":false,"fatMassCalc":false,"id":"2026-11-07","date":"2026-11-07","label":"Full scan","weight":199.9,"bmi":31.3,"bf":26.1,"fatMass":52.2,"visceral":9,"bodyAge":58,"lbm":null,"muscleMass":137.5,"muscleRate":null,"skeletalMusclePct":null,"subqFat":23.3,"bodyWater":54.2,"proteinPct":14.6,"bone":7.9,"bmr":1815,"scanTime":"08:08","device":"segmental","fatFreeMass":147.4,"skeletalMuscleMass":84.4,"bodyCellMass":97.4,"minerals":9.9,"intracellularWater":68.1,"extracellularWater":40.1,"heartRate":97,"leftArmMuscle":7.2,"leftArmFat":3.3,"rightArmMuscle":7.9,"rightArmFat":2.8,"leftLegMuscle":23.1,"leftLegFat":7.0,"rightLegMuscle":23.5,"rightLegFat":7.0,"trunkMuscle":65.2,"trunkFat":26.8,"subqFatMass":46.7,"waistHipRatio":0.89}],"fuel":[],"lifts":[],"labs":[
   {
+    "date": "2026-11-09",
+    "source": "VA",
+    "note": "First A1c on Wegovy; collected 7:47 AM",
+    "markers": [
+      {
+        "name": "HbA1c",
+        "origName": "A1C",
+        "value": 5.7,
+        "unit": "%",
+        "refLow": 4.4,
+        "refHigh": 6.0,
+        "flag": null
+      },
+      {
+        "name": "WBC",
+        "origName": "WBC",
+        "value": 6.52,
+        "unit": "K/mm3",
+        "refLow": 4.4,
+        "refHigh": 11,
+        "flag": null
+      },
+      {
+        "name": "RBC",
+        "origName": "RBC",
+        "value": 4.73,
+        "unit": "M/mm3",
+        "refLow": 4.6,
+        "refHigh": 6,
+        "flag": null
+      },
+      {
+        "name": "Hemoglobin",
+        "origName": "HGB",
+        "value": 13.1,
+        "unit": "g/dL",
+        "refLow": 13.9,
+        "refHigh": 17.2,
+        "flag": "Low"
+      },
+      {
+        "name": "Hematocrit",
+        "origName": "HCT",
+        "value": 42.4,
+        "unit": "%",
+        "refLow": 40,
+        "refHigh": 51,
+        "flag": null
+      },
+      {
+        "name": "MCV",
+        "origName": "MCV",
+        "value": 89.6,
+        "unit": "um3",
+        "refLow": 80,
+        "refHigh": 99,
+        "flag": null
+      },
+      {
+        "name": "MCH",
+        "origName": "MCH",
+        "value": 27.7,
+        "unit": "pg",
+        "refLow": 27,
+        "refHigh": 33.5,
+        "flag": null
+      },
+      {
+        "name": "MCHC",
+        "origName": "MCHC",
+        "value": 30.9,
+        "unit": "g/dL",
+        "refLow": 33,
+        "refHigh": 37,
+        "flag": "Low"
+      },
+      {
+        "name": "RDW",
+        "origName": "RDW",
+        "value": 15.0,
+        "unit": "%",
+        "refLow": 11.5,
+        "refHigh": 14.5,
+        "flag": "High"
+      },
+      {
+        "name": "Platelets",
+        "origName": "PLT",
+        "value": 280,
+        "unit": "K/mm3",
+        "refLow": 140,
+        "refHigh": 440,
+        "flag": null
+      },
+      {
+        "name": "MPV",
+        "origName": "MPV",
+        "value": 9.2,
+        "unit": "um3",
+        "refLow": 7.4,
+        "refHigh": 10.4,
+        "flag": null
+      },
+      {
+        "name": "Total cholesterol",
+        "origName": "CHOLESTEROL",
+        "value": 136,
+        "unit": "mg/dL",
+        "refLow": 70,
+        "refHigh": 200,
+        "flag": null
+      },
+      {
+        "name": "Triglycerides",
+        "origName": "TRIGLYCERIDE",
+        "value": 87,
+        "unit": "mg/dL",
+        "refLow": 35,
+        "refHigh": 150,
+        "flag": null
+      },
+      {
+        "name": "HDL-C",
+        "origName": "HDL CHOLESTEROL",
+        "value": 45,
+        "unit": "mg/dL",
+        "refLow": 40,
+        "refHigh": null,
+        "flag": null
+      },
+      {
+        "name": "LDL-C (calc)",
+        "origName": "LDL (CALCULATED)",
+        "value": 73.6,
+        "unit": "mg/dL",
+        "refLow": 0,
+        "refHigh": 100,
+        "flag": null
+      },
+      {
+        "name": "Non-HDL-C",
+        "origName": "NON HDL CHOLESTEROL",
+        "value": 91,
+        "unit": "mg/dL",
+        "refLow": 0,
+        "refHigh": 130,
+        "flag": null
+      },
+      {
+        "name": "Glucose",
+        "origName": "GLUCOSE,SERUM/PLASMA",
+        "value": 88,
+        "unit": "mg/dL",
+        "refLow": 70,
+        "refHigh": 100,
+        "flag": null
+      },
+      {
+        "name": "BUN",
+        "origName": "UREA NITROGEN",
+        "value": 18,
+        "unit": "mg/dL",
+        "refLow": 10,
+        "refHigh": 26,
+        "flag": null
+      },
+      {
+        "name": "Sodium",
+        "origName": "SODIUM",
+        "value": 141,
+        "unit": "mmol/L",
+        "refLow": 135,
+        "refHigh": 150,
+        "flag": null
+      },
+      {
+        "name": "Potassium",
+        "origName": "POTASSIUM",
+        "value": 4.4,
+        "unit": "mmol/L",
+        "refLow": 3.5,
+        "refHigh": 5.3,
+        "flag": null
+      },
+      {
+        "name": "Chloride",
+        "origName": "CHLORIDE",
+        "value": 105,
+        "unit": "mmol/L",
+        "refLow": 99,
+        "refHigh": 111,
+        "flag": null
+      },
+      {
+        "name": "CO2",
+        "origName": "CO2",
+        "value": 31,
+        "unit": "meq/L",
+        "refLow": 23,
+        "refHigh": 32,
+        "flag": null
+      },
+      {
+        "name": "Calcium",
+        "origName": "CALCIUM",
+        "value": 9.2,
+        "unit": "mg/dL",
+        "refLow": 8.5,
+        "refHigh": 10.4,
+        "flag": null
+      },
+      {
+        "name": "Anion gap",
+        "origName": "ANION GAP",
+        "value": 5,
+        "unit": "meq/L",
+        "refLow": 4,
+        "refHigh": 14,
+        "flag": null
+      },
+      {
+        "name": "ALP",
+        "origName": "ALKALINE PHOSPHATASE",
+        "value": 63,
+        "unit": "U/L",
+        "refLow": 56,
+        "refHigh": 119,
+        "flag": null
+      },
+      {
+        "name": "Total bilirubin",
+        "origName": "TOTAL BILIRUBIN,SERUM/PLASMA",
+        "value": 0.4,
+        "unit": "mg/dL",
+        "refLow": 0.2,
+        "refHigh": 1.0,
+        "flag": null
+      },
+      {
+        "name": "Creatinine",
+        "origName": "CREATININE,SERUM/PLASMA",
+        "value": 1.19,
+        "unit": "mg/dL",
+        "refLow": 0.6,
+        "refHigh": 1.4,
+        "flag": null
+      },
+      {
+        "name": "eGFR",
+        "origName": "EGFR-NR",
+        "value": 74,
+        "unit": "mL/min/1.73m2",
+        "refLow": null,
+        "refHigh": null,
+        "flag": null
+      },
+      {
+        "name": "ALT",
+        "origName": "ALT-A",
+        "value": 29,
+        "unit": "U/L",
+        "refLow": 8,
+        "refHigh": 55,
+        "flag": null
+      },
+      {
+        "name": "AST",
+        "origName": "AST-A",
+        "value": 24,
+        "unit": "U/L",
+        "refLow": 16,
+        "refHigh": 40,
+        "flag": null
+      },
+      {
+        "name": "Total protein",
+        "origName": "TOTAL PROTEIN2",
+        "value": 6.6,
+        "unit": "g/dL",
+        "refLow": 6.4,
+        "refHigh": 8.5,
+        "flag": null
+      },
+      {
+        "name": "Albumin",
+        "origName": "ALBUMIN,BCP2",
+        "value": 4.2,
+        "unit": "g/dL",
+        "refLow": 3.5,
+        "refHigh": 5.0,
+        "flag": null
+      },
+      {
+        "name": "PSA",
+        "origName": "PSA",
+        "value": 0.71,
+        "unit": "ng/mL",
+        "refLow": 0,
+        "refHigh": 4,
+        "flag": null
+      }
+    ]
+  },
+  {
     "date": "2026-03-27",
     "source": "VA",
     "markers": [

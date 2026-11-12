@@ -2,6 +2,10 @@
 
 Newest entry at the top.
 
+## 2026-11-09
+
+- VA lab draw (collected 7:47 AM). A1c 6.0 → 5.7, first A1c on Wegovy
+
 ## 2026-11-07
 
 - First official segmental-scale scan (`device: "segmental"`, 08:08). Weight 199.9, BF 26.1%, fat 52.2, fat-free 147.4, muscle mass 137.5, skeletal muscle 84.4, visceral 9, heart rate 97
