@@ -2,6 +2,18 @@
 
 Newest entry at the top.
 
+## 2026-11-14
+
+- Second segmental-scale scan (`device: "segmental"`, 07:44). Weight 200.3, BF 26.3%, fat 52.6, fat-free 147.4, muscle mass 137.5, skeletal muscle 84.4, visceral 9, heart rate 90, SMQI 9.7, health score 80
+- vs Nov 7 (same scale): weight +0.4 lb, fat +0.4 lb, BF +0.2 pp, trunk fat +0.3 lb. Fat-free mass, muscle mass, skeletal muscle, visceral, and BMR unchanged. Lean fully preserved. Heart rate −7 (97 → 90)
+- Within noise on this scale. Composition is not compared with Fitdays+. Weight stays on the continuous series and is still near 200 lb since early October (about 6 weeks), on max-dose Wegovy
+- Confounders: scan still later than the 06:30 target (07:44; Nov 7 was 08:08)
+- Waist not measured (`waistIn` null; last tape 36.58 in on Nov 1). Scale waist-hip ratio 0.9, not used as a tape waist
+- Segmental muscle (lb): L arm 7.2, R arm 7.9, trunk 65.2, L leg 23.1, R leg 23.5. Segmental fat (lb): L arm 3.3, R arm 2.8, trunk 27.1, L leg 7.0, R leg 7.0
+- Raise the weight plateau and the Nov 9 creatinine rise (1.19 mg/dL, eGFR 74) with the VA pharmacist. Dosing stays his call. Next: 3 lift sessions/week, denser protein at dinner (30 g+), scan by 06:30 on Sat 2026-11-21, and tape the waist
+- Scan: `scans/2026-11-14.md`
+- Council: `council/2026-11-14.md`
+
 ## 2026-11-09
 
 - VA lab draw (collected 7:47 AM). A1c 6.0 → 5.7, first A1c on Wegovy
