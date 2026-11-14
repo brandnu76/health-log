@@ -1436,6 +1436,10 @@
       { key: "intracellularWaterPct", label: "Intracellular water", unit: "%" },
       { key: "extracellularWaterPct", label: "Extracellular water", unit: "%" },
       { key: "heartRate", label: "Scale heart rate", unit: "bpm", digits: 0 },
+      { key: "subqFatMass", label: "Subq fat mass", unit: "lb" },
+      { key: "waistHipRatio", label: "Waist-hip ratio", unit: "" },
+      { key: "smqi", label: "SMQI", unit: "" },
+      { key: "healthScore", label: "Health score", unit: "", digits: 0 },
     ];
 
     const extraRoot = document.getElementById("extraMetrics");
@@ -3854,6 +3858,10 @@
       { key: "intracellularWater", label: "Intracellular water (lb)", digits: 1, lowerBetter: false, optional: true },
       { key: "extracellularWater", label: "Extracellular water (lb)", digits: 1, lowerBetter: false, optional: true },
       { key: "heartRate", label: "Scale heart rate (bpm)", digits: 0, lowerBetter: false, noTone: true, optional: true },
+      { key: "subqFatMass", label: "Subq fat mass (lb)", digits: 1, lowerBetter: true, optional: true },
+      { key: "waistHipRatio", label: "Waist-hip ratio", digits: 2, lowerBetter: true, optional: true },
+      { key: "smqi", label: "SMQI", digits: 1, lowerBetter: false, optional: true },
+      { key: "healthScore", label: "Health score", digits: 0, lowerBetter: false, optional: true },
       { key: "leftArmMuscle", label: "Left arm muscle (lb)", digits: 1, lowerBetter: false, optional: true },
       { key: "leftArmFat", label: "Left arm fat (lb)", digits: 1, lowerBetter: true, optional: true },
       { key: "rightArmMuscle", label: "Right arm muscle (lb)", digits: 1, lowerBetter: false, optional: true },
@@ -3967,6 +3975,10 @@
       "intracellularWaterPct",
       "extracellularWaterPct",
       "heartRate",
+      "subqFatMass",
+      "waistHipRatio",
+      "smqi",
+      "healthScore",
       "leftArmMuscle",
       "leftArmFat",
       "leftArmMusclePct",
