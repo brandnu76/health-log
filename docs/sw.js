@@ -1,4 +1,4 @@
-const CACHE = "health-log-v16";
+const CACHE = "health-log-v17";
 const PRECACHE = [
   "./",
   "./index.html",
