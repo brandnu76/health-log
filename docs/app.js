@@ -1134,10 +1134,34 @@
     },
     afterDraw(chart) {
       const cfg = chart.options.plugins && chart.options.plugins.refBands;
-      if (!cfg || !cfg.lines) return;
+      if (!cfg) return;
       const { ctx, chartArea, scales } = chart;
       if (!chartArea || !scales.y) return;
       const y = scales.y;
+      if (cfg.bands) {
+        ctx.save();
+        cfg.bands.forEach((b) => {
+          if (!b.label) return;
+          const top = Math.min(y.getPixelForValue(b.max), y.getPixelForValue(b.min));
+          const maxW = Math.max(0, chartArea.right - chartArea.left - 12);
+          ctx.fillStyle = cssVar("--text") || "#e8edf2";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "top";
+          let fontSize = 10;
+          ctx.font = "600 " + fontSize + "px Inter, system-ui, sans-serif";
+          while (fontSize > 8 && ctx.measureText(b.label).width > maxW) {
+            fontSize -= 1;
+            ctx.font = "600 " + fontSize + "px Inter, system-ui, sans-serif";
+          }
+          const yText = Math.min(
+            Math.max(top + 4, chartArea.top + 2),
+            chartArea.bottom - fontSize - 2
+          );
+          ctx.fillText(b.label, chartArea.left + 6, yText);
+        });
+        ctx.restore();
+      }
+      if (!cfg.lines) return;
       ctx.save();
       cfg.lines.forEach((ln) => {
         const py = y.getPixelForValue(ln.value);
@@ -1216,6 +1240,414 @@
       '<div class="segmental-grid">' +
       parts.join("") +
       "</div>";
+  }
+
+  // InBody's published general reference for ECW/TBW. Context only, not a cutoff we score.
+  const ECW_REF_MIN = 0.36;
+  const ECW_REF_MAX = 0.39;
+  const ECW_REF_LABEL = "InBody general reference (0.360–0.390)";
+  const ECW_OUTSIDE_NOTE =
+    "outside general reference — ask your clinician if it persists";
+  const ARM_MUSCLE_KEYS = ["leftArmMuscle", "rightArmMuscle"];
+  const LEG_MUSCLE_KEYS = ["leftLegMuscle", "rightLegMuscle"];
+
+  function dropChart(id) {
+    if (typeof Chart === "undefined" || !Chart.getChart) return;
+    const existing = Chart.getChart(id);
+    if (!existing) return;
+    const idx = charts.indexOf(existing);
+    if (idx >= 0) charts.splice(idx, 1);
+    existing.destroy();
+  }
+
+  /**
+   * ECW/TBW = extracellularWater / (extracellularWater + intracellularWater).
+   * waterWeight is the scale's total body water. On 2026-11-07 and 2026-11-14
+   * the compartments sum to waterWeight (40.1 + 68.1 = 108.2 lb). If a later
+   * scan's compartments and waterWeight disagree, keep ECW / (ECW + ICW).
+   * Do not switch the denominator to waterWeight.
+   */
+  function ecwRatioOf(scan) {
+    const ecw = numericField(scan, "extracellularWater");
+    const icw = numericField(scan, "intracellularWater");
+    if (ecw == null || icw == null) return null;
+    const compartments = ecw + icw;
+    if (!(compartments > 0)) return null;
+    return ecw / compartments;
+  }
+
+  function ecwOutsideRef(ratio) {
+    if (ratio == null || !Number.isFinite(ratio)) return false;
+    const shown = Number(ratio.toFixed(3));
+    return shown < ECW_REF_MIN || shown > ECW_REF_MAX;
+  }
+
+  function earlierMatchingScan(scans, latest, pred) {
+    if (!latest) return null;
+    let best = null;
+    (scans || []).forEach((s) => {
+      if (!s || s.id === latest.id) return;
+      if (String(s.date) >= String(latest.date)) return;
+      if (pred && !pred(s)) return;
+      if (!best || String(s.date) > String(best.date)) best = s;
+    });
+    return best;
+  }
+
+  function sumMuscle(scan, keys) {
+    let total = 0;
+    for (let i = 0; i < keys.length; i++) {
+      const v = numericField(scan, keys[i]);
+      if (v == null) return null;
+      total += v;
+    }
+    return total;
+  }
+
+  function hasSegmentalMuscle(scan) {
+    return SEGMENT_ROWS.some((row) => numericField(scan, row[1]) != null);
+  }
+
+  /** (bigger − smaller) / bigger, as a percent. Null when either side is missing. */
+  function differencePct(left, right) {
+    if (left == null || right == null) return null;
+    const bigger = Math.max(left, right);
+    if (!(bigger > 0)) return null;
+    return ((bigger - Math.min(left, right)) / bigger) * 100;
+  }
+
+  function differenceText(left, right) {
+    const pct = differencePct(left, right);
+    if (pct == null) return null;
+    if (left === right) return "0% difference";
+    const side = left > right ? "left larger" : "right larger";
+    return fmt.num(pct, 1) + "% difference · " + side;
+  }
+
+  function signedLb(current, prior) {
+    if (current == null || prior == null) return null;
+    const text = fmt.signed(current - prior, 1);
+    return text == null ? null : text + " lb";
+  }
+
+  function priorLead(prior) {
+    return "vs prior segmental (" + escapeHtml(fmt.date(prior.date)) + ")";
+  }
+
+  function balanceItem(label, valueHtml, subs) {
+    const extra = (subs || [])
+      .filter(Boolean)
+      .map(function (s) {
+        return '<span class="balance-sub">' + s + "</span>";
+      })
+      .join("");
+    return (
+      '<div class="extra-item" role="listitem"><span class="elabel">' +
+      escapeHtml(label) +
+      '</span><span class="eval">' +
+      valueHtml +
+      "</span>" +
+      extra +
+      "</div>"
+    );
+  }
+
+  function sideValue(left, right) {
+    const l =
+      left == null ? "Left not on this scan" : "Left " + fmt.num(left, 1) + " lb";
+    const r =
+      right == null ? "Right not on this scan" : "Right " + fmt.num(right, 1) + " lb";
+    return escapeHtml(l + " · " + r);
+  }
+
+  function pairDeltaText(prior, left, right, leftKey, rightKey) {
+    if (!prior) return null;
+    const priorLeft = numericField(prior, leftKey);
+    const priorRight = numericField(prior, rightKey);
+    const bits = [];
+    const dLeft = signedLb(left, priorLeft);
+    const dRight = signedLb(right, priorRight);
+    if (dLeft) bits.push("left " + dLeft);
+    if (dRight) bits.push("right " + dRight);
+    const curPct = differencePct(left, right);
+    const prevPct = differencePct(priorLeft, priorRight);
+    if (curPct != null && prevPct != null) {
+      const dPct = fmt.signed(curPct - prevPct, 1);
+      if (dPct != null) bits.push("difference " + dPct + " pp");
+    }
+    if (!bits.length) return null;
+    return priorLead(prior) + " · " + bits.join(" · ");
+  }
+
+  function sideBalanceItem(label, latest, prior, leftKey, rightKey) {
+    const left = numericField(latest, leftKey);
+    const right = numericField(latest, rightKey);
+    if (left == null && right == null) return "";
+    return balanceItem(label, sideValue(left, right), [
+      differenceText(left, right),
+      pairDeltaText(prior, left, right, leftKey, rightKey),
+    ]);
+  }
+
+  function splitBalanceItems(latest, prior) {
+    const items = [];
+    const arms = sumMuscle(latest, ARM_MUSCLE_KEYS);
+    const legs = sumMuscle(latest, LEG_MUSCLE_KEYS);
+    const trunk = numericField(latest, "trunkMuscle");
+    if (arms != null && legs != null) {
+      const limbs = arms + legs;
+      const subs = [];
+      if (limbs > 0) {
+        subs.push(
+          "Arms " +
+            fmt.num((arms / limbs) * 100, 1) +
+            "% of limb muscle · legs " +
+            fmt.num((legs / limbs) * 100, 1) +
+            "%"
+        );
+      }
+      if (prior) {
+        const priorArms = sumMuscle(prior, ARM_MUSCLE_KEYS);
+        const priorLegs = sumMuscle(prior, LEG_MUSCLE_KEYS);
+        const bits = [];
+        const dArms = signedLb(arms, priorArms);
+        const dLegs = signedLb(legs, priorLegs);
+        if (dArms) bits.push("arms " + dArms);
+        if (dLegs) bits.push("legs " + dLegs);
+        if (bits.length) subs.push(priorLead(prior) + " · " + bits.join(" · "));
+      }
+      items.push(
+        balanceItem(
+          "Arms vs legs",
+          escapeHtml(fmt.num(arms, 1) + " lb arms · " + fmt.num(legs, 1) + " lb legs"),
+          subs
+        )
+      );
+    }
+    if (arms != null && legs != null && trunk != null) {
+      const limbs = arms + legs;
+      const total = limbs + trunk;
+      if (total > 0) {
+        const limbShare = (limbs / total) * 100;
+        const trunkShare = (trunk / total) * 100;
+        const subs = ["Share of segmental muscle"];
+        if (prior) {
+          const priorArms = sumMuscle(prior, ARM_MUSCLE_KEYS);
+          const priorLegs = sumMuscle(prior, LEG_MUSCLE_KEYS);
+          const priorTrunk = numericField(prior, "trunkMuscle");
+          if (priorArms != null && priorLegs != null && priorTrunk != null) {
+            const priorLimbs = priorArms + priorLegs;
+            const priorTotal = priorLimbs + priorTrunk;
+            if (priorTotal > 0) {
+              const dLimbs = signedLb(limbs, priorLimbs);
+              const dTrunk = signedLb(trunk, priorTrunk);
+              const dShare = fmt.signed(
+                limbShare - (priorLimbs / priorTotal) * 100,
+                1
+              );
+              const bits = [];
+              if (dLimbs) bits.push("limbs " + dLimbs);
+              if (dTrunk) bits.push("trunk " + dTrunk);
+              if (dShare != null) bits.push("limbs share " + dShare + " pp");
+              if (bits.length) subs.push(priorLead(prior) + " · " + bits.join(" · "));
+            }
+          }
+        }
+        items.push(
+          balanceItem(
+            "Limbs vs trunk",
+            escapeHtml(
+              fmt.num(limbs, 1) +
+                " lb limbs (" +
+                fmt.num(limbShare, 1) +
+                "%) · " +
+                fmt.num(trunk, 1) +
+                " lb trunk (" +
+                fmt.num(trunkShare, 1) +
+                "%)"
+            ),
+            subs
+          )
+        );
+      }
+    }
+    return items.join("");
+  }
+
+  function renderEcwCard(root, latest, prior) {
+    const ratio = latest ? ecwRatioOf(latest) : null;
+    if (ratio == null) {
+      appendMetricCard(root, {
+        label: "ECW ratio",
+        empty: true,
+        title:
+          "Extracellular water divided by extracellular plus intracellular water.",
+        valueHtml: "Not measured",
+        deltaHtml:
+          '<span class="delta neutral">Needs extracellular and intracellular water</span>',
+      });
+      return;
+    }
+    const outside = ecwOutsideRef(ratio);
+    const priorRatio = prior ? ecwRatioOf(prior) : null;
+    let deltaHtml;
+    if (priorRatio == null) {
+      deltaHtml =
+        '<span class="delta neutral">No prior segmental scan with both water compartments</span>';
+    } else {
+      const d = fmt.signed(ratio - priorRatio, 3);
+      deltaHtml =
+        '<span class="delta neutral">' +
+        (d == null ? "—" : d) +
+        " vs prior segmental</span>" +
+        '<span class="delta secondary neutral">' +
+        escapeHtml(fmt.date(prior.date)) +
+        "</span>";
+    }
+    if (outside) {
+      deltaHtml +=
+        '<span class="delta secondary neutral">' + ECW_OUTSIDE_NOTE + "</span>";
+    }
+    appendMetricCard(root, {
+      label: "ECW ratio",
+      band: outside ? "outside" : null,
+      title:
+        "ECW/TBW: extracellular water divided by extracellular plus intracellular water. Hydration-distribution context from this scale, not a medical test.",
+      valueHtml: fmt.num(ratio, 3),
+      deltaHtml: deltaHtml,
+    });
+  }
+
+  function segmentalScans(data) {
+    return scansOnDevice(data.scans || [], "segmental").filter(function (s) {
+      return scanDeviceId(s) === "segmental";
+    });
+  }
+
+  function renderBiaContext(data) {
+    const root = document.getElementById("biaContext");
+    if (!root) return;
+    dropChart("chartEcwRatio");
+    const device = viewDevice(data);
+    if (!device || device.id !== "segmental") {
+      root.hidden = true;
+      root.innerHTML = "";
+      return;
+    }
+    const scans = segmentalScans(data);
+    const latest = latestFullScan(scans);
+    const ratioScans = scans.filter(function (s) {
+      return ecwRatioOf(s) != null;
+    });
+    const showLean = !!(latest && hasSegmentalMuscle(latest));
+    const latestHasWater =
+      !!latest &&
+      (numericField(latest, "extracellularWater") != null ||
+        numericField(latest, "intracellularWater") != null);
+    const showEcw = ratioScans.length > 0 || latestHasWater;
+    if (!showEcw && !showLean) {
+      root.hidden = true;
+      root.innerHTML = "";
+      return;
+    }
+    const parts = [];
+    if (showEcw) {
+      parts.push(
+        '<div class="bia-block">' +
+          '<h3 id="chart-ecw-label">ECW ratio</h3>' +
+          '<div class="bia-split' +
+          (ratioScans.length ? "" : " bia-split-card") +
+          '">' +
+          '<div class="metric-grid" id="ecwRatioCard" role="list"></div>' +
+          (ratioScans.length
+            ? '<div class="card card-pad chart-card"><p class="chart-band-note">Segmental scans only. Shaded: ' +
+              escapeHtml(ECW_REF_LABEL) +
+              '.</p><div class="chart-wrap chart-wrap-compact"><canvas id="chartEcwRatio" role="img" aria-labelledby="chart-ecw-label"></canvas></div></div>'
+            : "") +
+          "</div>" +
+          '<p class="bia-caption" id="ecwRatioCaption">This is a hydration-distribution context number from a consumer BIA scale. Use it to judge whether a lean or fat-free mass change might be water rather than tissue. It is not a medical test.</p>' +
+          "</div>"
+      );
+    }
+    if (showLean) {
+      const prior = earlierMatchingScan(scans, latest, hasSegmentalMuscle);
+      const rows =
+        sideBalanceItem("Arms", latest, prior, "leftArmMuscle", "rightArmMuscle") +
+        sideBalanceItem("Legs", latest, prior, "leftLegMuscle", "rightLegMuscle") +
+        splitBalanceItems(latest, prior);
+      parts.push(
+        '<div class="bia-block">' +
+          '<h3 id="lean-balance-heading">Segmental lean balance</h3>' +
+          '<p class="chart-band-note">One-arm kettlebell work can be programmed to even the sides. BIA segmental estimates are noisy week to week.</p>' +
+          '<div class="segmental-grid balance-grid" role="list" aria-labelledby="lean-balance-heading">' +
+          rows +
+          "</div></div>"
+      );
+    }
+    root.hidden = false;
+    root.innerHTML = parts.join("");
+    const cardRoot = document.getElementById("ecwRatioCard");
+    if (cardRoot) {
+      renderEcwCard(
+        cardRoot,
+        latest,
+        earlierMatchingScan(scans, latest, function (s) {
+          return ecwRatioOf(s) != null;
+        })
+      );
+    }
+  }
+
+  function renderEcwChart(data) {
+    const canvasId = "chartEcwRatio";
+    dropChart(canvasId);
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !data) return;
+    const device = viewDevice(data);
+    if (!device || device.id !== "segmental") return;
+    const points = [];
+    scansInRange(segmentalScans(data), chartRange).forEach(function (s) {
+      if (scanDeviceId(s) !== "segmental") return;
+      const y = ecwRatioOf(s);
+      if (y == null) return;
+      points.push({ x: s.date, y: y, outside: ecwOutsideRef(y) });
+    });
+    if (!points.length) {
+      setChartEmpty(
+        canvasId,
+        "No segmental scan in this range has both extracellular and intracellular water."
+      );
+      attachChartSummary(
+        canvasId,
+        "ECW ratio: no segmental scans with both water compartments in this range."
+      );
+      return;
+    }
+    setChartEmpty(canvasId, null);
+    makeLineChart(
+      canvasId,
+      points,
+      "ECW ratio",
+      { bands: [{ min: ECW_REF_MIN, max: ECW_REF_MAX, label: ECW_REF_LABEL }] },
+      {
+        digits: 3,
+        yDigits: 3,
+        pointRoles: points.map(function (p) {
+          return p.outside ? "muted" : "accent";
+        }),
+      }
+    );
+    attachChartSummary(
+      canvasId,
+      seriesSummary(
+        points,
+        "ECW ratio, extracellular water divided by extracellular plus intracellular water",
+        3
+      ) +
+        " Shaded band is the " +
+        ECW_REF_LABEL +
+        ". Segmental scans only."
+    );
   }
 
   function renderFallbackWeight(root, data, device) {
@@ -1459,6 +1891,7 @@
     });
 
     renderSegmental(latest);
+    renderBiaContext(data);
     renderWhatMoved(data);
     renderLossQuality(data);
   }
@@ -1638,6 +2071,7 @@
           min: b.min,
           max: b.max,
           color: b.color || bandColor,
+          label: b.label || "",
         })),
         lines: (refCfg.lines || []).map((ln) => ({
           value: ln.value,
@@ -1658,9 +2092,14 @@
 
     const pointBorder = cssVar("--bg") || "#0f1419";
     const colorByDevice = extra && extra.colorByDevice;
-    const pointRoles = colorByDevice
-      ? points.map((p) => (p.device && p.device !== "fitdays" ? "caution" : "accent"))
-      : null;
+    const pointRoles =
+      extra && extra.pointRoles
+        ? extra.pointRoles
+        : colorByDevice
+          ? points.map((p) =>
+              p.device && p.device !== "fitdays" ? "caution" : "accent"
+            )
+          : null;
     const pointColors = pointRoles
       ? pointRoles.map((role) => seriesColor(role, colors))
       : colors.accent;
@@ -1702,6 +2141,14 @@
       });
     }
 
+    const yTicks = { color: colors.text };
+    if (extra && extra.yDigits != null) {
+      const yDigits = extra.yDigits;
+      yTicks.callback = function (value) {
+        return fmt.num(value, yDigits);
+      };
+    }
+
     const chart = new Chart(canvas, {
       type: "line",
       data: {
@@ -1733,7 +2180,7 @@
             grid: { color: colors.grid, drawBorder: false },
           },
           y: {
-            ticks: { color: colors.text },
+            ticks: yTicks,
             grid: { color: colors.grid, drawBorder: false },
             suggestedMin,
             suggestedMax,
@@ -1759,6 +2206,7 @@
         document.documentElement.getAttribute("data-theme") === "light";
       return light ? "#0f766e" : "#e2e8f0";
     }
+    if (role === "muted") return colors.text;
     return colors.accent;
   }
 
@@ -2111,6 +2559,7 @@
       "chartWhtr",
       "chartRfm",
       "chartFfmiFmi",
+      "chartEcwRatio",
     ].forEach((id) => {
       const c = typeof Chart !== "undefined" ? Chart.getChart(id) : null;
       if (c) c.destroy();
@@ -2370,6 +2819,7 @@
       seriesSummary(fatPts, "Fat mass in pounds", 1) + " " + seriesSummary(lbmPts, "Lean body mass in pounds", 1)
     );
 
+    renderEcwChart(data);
     renderComposition(data);
   }
 
