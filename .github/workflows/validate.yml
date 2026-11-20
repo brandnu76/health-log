@@ -1,0 +1,59 @@
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate data.json
+        run: python3 scripts/validate_data.py
+
+      - name: HTML sanity
+        run: python3 scripts/validate_html.py
+
+      - name: JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(docs/*.js)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No docs/*.js files found" >&2
+            exit 1
+          fi
+          # Truncated copies of app.js. sw.js precaches them, but no page loads
+          # them, and they are not valid standalone programs, so node --check
+          # cannot parse them. Every other docs/*.js file is checked.
+          skip=" docs/app-h.js docs/app-k.js "
+          checked=0
+          for f in "${files[@]}"; do
+            if [[ "$skip" == *" $f "* ]]; then
+              echo "skip $f (incomplete slice of app.js, not a loaded script)"
+              continue
+            fi
+            node --check "$f"
+            checked=$((checked + 1))
+          done
+          echo "node --check passed for ${checked} files"
+
+      - name: Medication-name guard
+        run: python3 scripts/check_no_meds.py
+
+      - name: Service worker cache version
+        run: python3 scripts/check_sw_cache.py

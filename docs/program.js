@@ -80,8 +80,6 @@
       name: typeof p.name === "string" && p.name.trim() ? p.name.trim() : "Program",
       startDate: startDate,
       start: start,
-      medication: typeof p.medication === "string" && p.medication.trim() ? p.medication.trim() : null,
-      medicationStartDate: typeof p.medicationStartDate === "string" && DATE_RE.test(p.medicationStartDate) ? p.medicationStartDate : null,
       latestClinic: latestClinic,
       current: current,
       goal: num(targets.goalWeightLb),
@@ -167,29 +165,29 @@
 
     var card = el("div", "card card-pad");
     card.id = "programCard";
-    card.appendChild(el("h3", null, m.name + (m.startDate ? " since " + fmtDate(m.startDate) : "")));
-    if (m.medication) {
-      var medName = m.medication.split(" (")[0];
-      card.appendChild(el("p", "chart-band-note",
-        medName + (m.medicationStartDate ? " since " + fmtDate(m.medicationStartDate) : "") +
-        " \u00b7 dose managed by VA clinician (not advised here)"));
-    }
+    var title = m.name || "Program";
+    var started = m.startDate ? fmtDate(m.startDate) : "";
+    if (started) title += " since " + started;
+    card.appendChild(el("h3", null, title));
 
     var grid = el("div", "metric-grid");
     grid.setAttribute("role", "list");
     if (m.start !== null) {
-      grid.appendChild(statCard("Program start", fmt(m.start), "lb", "VA clinic" + (m.startDate ? " \u00b7 " + fmtDate(m.startDate) : "")));
+      var startSub = "VA clinic";
+      if (started) startSub += " \u00b7 " + started;
+      grid.appendChild(statCard("Program start", fmt(m.start), "lb", startSub));
     }
     if (m.latestClinic) {
-      var sub = "VA clinic \u00b7 " + fmtDate(m.latestClinic.date);
+      var clinicWhen = fmtDate(m.latestClinic.date);
+      var sub = "VA clinic" + (clinicWhen ? " \u00b7 " + clinicWhen : "");
       if (m.start !== null) sub += " \u00b7 " + signed(m.latestClinic.weightLb - m.start) + " since start";
       grid.appendChild(statCard("Latest clinic", fmt(m.latestClinic.weightLb), "lb", sub));
     }
     if (m.goal !== null) {
-      grid.appendChild(statCard("Goal weight", fmt(m.goal), "lb",
-        (m.checkpoint !== null ? "Checkpoint " + fmt(m.checkpoint) + " lb \u00b7 " : "") + "keep lean, waist < 33.5 in"));
+      var goalSub = m.checkpoint !== null ? "Checkpoint " + fmt(m.checkpoint) + " lb \u00b7 " : "";
+      grid.appendChild(statCard("Goal weight", fmt(m.goal), "lb", goalSub + "keep lean, waist < 33.5 in"));
     }
-    card.appendChild(grid);
+    if (grid.childElementCount) card.appendChild(grid);
 
     if (m.goal !== null && m.start !== null) {
       var bar = progressBar(m);
