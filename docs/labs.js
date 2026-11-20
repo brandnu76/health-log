@@ -386,19 +386,26 @@
       body.appendChild(block);
     });
 
-    var noted = (model.draws || []).filter(function (d) { return d.note; });
+    var noted = (model.draws || []).filter(function (d) {
+      return d && typeof d.note === "string" && d.note.trim();
+    });
     if (noted.length) {
       var notes = el("div", "lab-notes");
       notes.appendChild(el("h3", "lab-group-title", "Draw notes"));
       var ul = document.createElement("ul");
       noted.forEach(function (d) {
+        var text = d.note.trim();
+        if (!text || text.toLowerCase() === "undefined" || text.toLowerCase() === "null") return;
+        var when = api.fmtDate(d.date, true) || d.date || "";
         var li = document.createElement("li");
-        li.appendChild(el("span", "lab-note-date", api.fmtDate(d.date, true)));
-        li.appendChild(document.createTextNode(" " + d.note));
+        if (when) li.appendChild(el("span", "lab-note-date", when));
+        li.appendChild(document.createTextNode((when ? " " : "") + text));
         ul.appendChild(li);
       });
-      notes.appendChild(ul);
-      body.appendChild(notes);
+      if (ul.childElementCount) {
+        notes.appendChild(ul);
+        body.appendChild(notes);
+      }
     }
 
     if (model.draws.length && model.markers.length) body.appendChild(historyBlock(model));
@@ -676,6 +683,15 @@ function markerKey(name) {
     return v.trim();
   }
 
+  function noteText(note) {
+    if (typeof note !== "string") return "";
+    var text = note.replace(/\s+/g, " ").trim();
+    if (!text) return "";
+    var lower = text.toLowerCase();
+    if (lower === "undefined" || lower === "null") return "";
+    return text;
+  }
+
   function cleanMarker(raw) {
     if (!raw || typeof raw !== "object") return null;
     var name = typeof raw.name === "string" ? raw.name.trim() : "";
@@ -712,7 +728,7 @@ function markerKey(name) {
         });
       }
       if (!markers.length) return;
-      var note = typeof row.note === "string" ? row.note.trim() : "";
+      var note = noteText(row.note);
       entries.push({
         date: row.date,
         source: typeof row.source === "string" ? row.source.trim() : "",
