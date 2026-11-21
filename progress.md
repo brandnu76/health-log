@@ -2,6 +2,18 @@
 
 Newest entry at the top.
 
+## 2026-11-21
+
+- Third segmental-scale scan (`device: "segmental"`, 10:09). Weight 199.5, BF 25.7%, fat 51.3, fat-free 148.1, muscle mass 137.7, skeletal muscle 84.8, visceral 9, heart rate 87, SMQI 9.7, health score 81
+- vs Nov 14 (same scale): weight −0.8 lb, fat −1.3 lb, BF −0.6 pp, fat-free +0.7 lb, skeletal muscle +0.4 lb, trunk fat −0.7 lb. Visceral unchanged. Lean held and is slightly up, inside one-week BIA noise. Heart rate −3 (90 → 87). Logged mornings on this scale: 97 → 90 → 87. Composition is not compared with Fitdays+
+- Best week on this scale so far. One week is not a trend. Weight stays on the continuous series (199.5 lb, lowest morning weight since 199.0 on Oct 10)
+- Confounders: late scan, and later than the prior segmental mornings (10:09; target 06:30; Nov 14 was 07:44; Nov 7 was 08:08). The dashboard flags it because `scanTime` is after `scanTimeTarget`
+- Waist 36.30 in, taped by Brandon (`waistIn` 36.30). WHtR 0.542 (36.30/67). Under the Oct 3 baseline (36.625) and the Nov 1 tape (36.58). Series low remains 35.99 in on Oct 24. Target remains under 0.5 (~33.5 in). Scale waist-hip ratio 0.9, not used as a tape waist
+- ECW 40.1 lb unchanged, ICW 68.3 lb (+0.2), total body water 108.4 lb. ECW/TBW = 40.1/108.4 = 0.370 (was 0.371). Segmental muscle (lb): L arm 7.2, R arm 7.9, trunk 65.6, L leg 23.1, R leg 23.8. Segmental fat (lb): L arm 3.3, R arm 2.8, trunk 26.4, L leg 7.0, R leg 6.8
+- Next: 3 lift sessions/week, denser protein at dinner (30 g+), scan fasted by 06:30 on Sat 2026-11-28, and tape the waist
+- Scan: `scans/2026-11-21.md`
+- Council: `council/2026-11-21.md`
+
 ## 2026-11-14
 
 - Second segmental-scale scan (`device: "segmental"`, 07:44). Weight 200.3, BF 26.3%, fat 52.6, fat-free 147.4, muscle mass 137.5, skeletal muscle 84.4, visceral 9, heart rate 90, SMQI 9.7, health score 80
