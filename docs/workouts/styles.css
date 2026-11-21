@@ -171,7 +171,7 @@ h3 { margin: 0; font-size: 1rem; }
 }
 .day-row, .bells { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .day-row { margin-top: 0.8rem; }
-.day-row button, .bells button, .btn, .done-btn, .tabbar button, .rest-actions button {
+.day-row button, .bells button, .btn, .done-btn, .warmup-btn, .tabbar button, .rest-actions button {
   font: inherit;
   cursor: pointer;
   border-radius: var(--radius-sm);
@@ -219,6 +219,9 @@ h3 { margin: 0; font-size: 1rem; }
 .bells { grid-column: 2 / 4; }
 .bells button { flex: 1; min-height: 2.4rem; font-size: 0.85rem; font-weight: 650; }
 .done-btn { min-width: 4.4rem; min-height: 2.75rem; padding: 0.35rem 0.55rem; font-weight: 700; }
+.warmup-btn { grid-column: 1 / -1; min-height: 2.25rem; font-size: 0.82rem; font-weight: 650; }
+.warmup-btn[aria-pressed="true"] { background: var(--caution-soft); border-color: var(--caution); }
+.set-row.is-warmup { opacity: 0.8; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
 .btn {
   min-height: 2.75rem;

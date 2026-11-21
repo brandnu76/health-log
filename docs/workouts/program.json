@@ -4,12 +4,24 @@
   "start": "2026-11-23",
   "end": "2027-01-01",
   "timezone": "America/New_York",
-  "editing": "This file is the program. For the next block, replace days, exercises, weeks, and deload. Keep an exercise id the same when the movement continues so suggestions still use its history. No Block 2 training file was in the repo; the sets, reps, and starting weights below are the Block 2 defaults.",
+  "editing": "Source plan: lifts/ or Council block2.md. For the next block, replace days, exercises, weeks, and deload. Keep an exercise id the same when the movement continues so suggestions still use its history. A day slot can override sets, repLow, repHigh, seconds, and extraLeftSets for a shared exercise.",
   "equipment": {
     "kettlebellsLb": [25, 30, 35, 40],
     "stepLb": 5,
     "bench": true,
     "note": "Adjustable kettlebells, 25–40 lb in 5 lb steps, and a bench."
+  },
+  "tempo": {
+    "lowerSec": 3,
+    "pauseSec": 1,
+    "liftSec": 1,
+    "label": "3-1-1"
+  },
+  "rest": {
+    "minSec": 60,
+    "maxSec": 90,
+    "defaultSec": 90,
+    "after": "both-sides"
   },
   "schedule": {
     "Mon": "A",
@@ -18,22 +30,26 @@
   },
   "cues": [
     "Left side first.",
-    "Lower for 3 seconds.",
-    "Rest 90 seconds. Skip the timer between sides if you want a shorter session.",
+    "Tempo 3-1-1.",
+    "Rest 60–90 seconds. The timer uses 90. Full rest after both sides.",
+    "Mark a light set as Warm-up. It stays on this phone and is not sent.",
     "Stop the set when form slips.",
     "Stop the session if you feel dizzy, faint, short of breath, or chest pain."
   ],
   "progression": {
     "stepLb": 5,
     "capLb": 40,
-    "repLadderHigh": 15,
+    "repSteps": [12, 15],
     "pauseSec": 2,
     "slowLowerSec": 4,
     "extraSets": 1,
+    "bilateralSetCap": 5,
+    "unilateralSetCap": 4,
     "shortRestSec": 60,
     "ladder": [
-      "When every set hits the top of the rep range, add 5 lb, up to 40.",
-      "At 40 lb: more reps (up to 15), then a 2-second pause, then a 4-second lowering, then one extra set, then 60-second rest."
+      "When every working set hits the top of the range, add 5 lb and start the next session at the bottom of that day's range.",
+      "At 40 lb, one change at a time: reps to 12, then 15, a 2-second pause, a 4-second lowering, one extra set (cap 5 bilateral, 4 per side), then 45–60 seconds rest.",
+      "Front plank stops at 45 seconds. After that, add time on the side plank."
     ]
   },
   "deload": {
@@ -41,45 +57,51 @@
     "start": "2026-12-28",
     "end": "2027-01-01",
     "sets": 2,
-    "note": "Same weights. Two sets on the 3-set lifts. Stop at the bottom of the rep range. Do not add weight this week."
+    "note": "Two sets of every exercise. Keep the load, or drop 5 lb. No added pause and no short rest. RIR 3."
   },
   "weeks": [
     {
       "n": 1,
       "start": "2026-11-23",
       "end": "2026-11-29",
-      "note": "Learn the split. Stay at the starting weights unless every set is already easy."
+      "rir": "2",
+      "note": "RIR 2. Stop with about 2 reps left."
     },
     {
       "n": 2,
       "start": "2026-11-30",
       "end": "2026-12-06",
-      "note": "Add weight only when every set hits the top of the rep range."
+      "rir": "2",
+      "note": "RIR 2. Stop with about 2 reps left."
     },
     {
       "n": 3,
       "start": "2026-12-07",
       "end": "2026-12-13",
-      "note": "Same plan."
+      "rir": "1–2",
+      "note": "RIR 1–2."
     },
     {
       "n": 4,
       "start": "2026-12-14",
       "end": "2026-12-20",
-      "note": "Same plan."
+      "rir": "1–2",
+      "note": "RIR 1–2."
     },
     {
       "n": 5,
       "start": "2026-12-21",
       "end": "2026-12-27",
-      "note": "Last build week before the deload."
+      "rir": "1–2",
+      "note": "RIR 1–2. Last build week before the deload."
     },
     {
       "n": 6,
       "start": "2026-12-28",
       "end": "2027-01-01",
+      "rir": "3",
       "deload": true,
-      "note": "Deload. Two sets on the 3-set lifts, same weights, no new progression."
+      "note": "Deload. RIR 3. Two sets. Keep the load or drop 5 lb."
     }
   ],
   "days": [
@@ -87,19 +109,34 @@
       "id": "A",
       "name": "Squat",
       "weekday": "Monday",
-      "exerciseIds": ["goblet-squat", "kb-floor-bench-press", "plank"]
+      "slots": [
+        { "id": "goblet-squat", "sets": 4, "repLow": 8, "repHigh": 10 },
+        { "id": "bench-press", "sets": 3, "repLow": 8, "repHigh": 10 },
+        { "id": "one-arm-row", "sets": 3, "repLow": 8, "repHigh": 10 },
+        { "id": "plank", "sets": 2, "seconds": 30 }
+      ]
     },
     {
       "id": "B",
       "name": "Hinge",
       "weekday": "Wednesday",
-      "exerciseIds": ["kb-rdl", "one-arm-row"]
+      "slots": [
+        { "id": "kb-rdl", "sets": 4, "repLow": 8, "repHigh": 10 },
+        { "id": "one-arm-row", "sets": 3, "repLow": 10, "repHigh": 12, "extraLeftSets": 1 },
+        { "id": "bench-press", "sets": 3, "repLow": 8, "repHigh": 10 },
+        { "id": "side-plank", "sets": 2, "seconds": 20 }
+      ]
     },
     {
       "id": "C",
       "name": "Unilateral",
       "weekday": "Friday",
-      "exerciseIds": ["split-squat", "single-leg-rdl", "side-plank"]
+      "note": "Optional warm-up: 5 bodyweight split squats per side.",
+      "slots": [
+        { "id": "split-squat", "sets": 3, "repLow": 8, "repHigh": 10 },
+        { "id": "single-arm-bench-press", "sets": 3, "repLow": 8, "repHigh": 10 },
+        { "id": "single-leg-rdl", "sets": 3, "repLow": 8, "repHigh": 10 }
+      ]
     }
   ],
   "exercises": [
@@ -108,17 +145,17 @@
       "name": "Goblet Squat (Kettlebell)",
       "kind": "load",
       "unilateral": false,
-      "sets": 3,
+      "sets": 4,
       "repLow": 8,
       "repHigh": 10,
       "startWeightLb": 30,
       "restSec": 90,
       "lowerSec": 3,
-      "note": "One bell at the chest. Elbows inside the knees. Lower for 3 seconds."
+      "note": "One bell at the chest. Elbows inside the knees."
     },
     {
-      "id": "kb-floor-bench-press",
-      "name": "Floor / Bench Press (Kettlebell)",
+      "id": "bench-press",
+      "name": "Bench Press (Kettlebell)",
       "kind": "load",
       "unilateral": false,
       "sets": 3,
@@ -127,32 +164,7 @@
       "startWeightLb": 25,
       "restSec": 90,
       "lowerSec": 3,
-      "note": "25 lb per bell. Two bells, or a floor press if the bench is awkward. Log the bell weight."
-    },
-    {
-      "id": "plank",
-      "name": "Plank",
-      "kind": "hold",
-      "unilateral": false,
-      "sets": 2,
-      "seconds": 30,
-      "stepSec": 5,
-      "capSec": 45,
-      "restSec": 90,
-      "note": "Bodyweight. Straight line from head to heels."
-    },
-    {
-      "id": "kb-rdl",
-      "name": "Romanian Deadlift (Kettlebell)",
-      "kind": "load",
-      "unilateral": false,
-      "sets": 3,
-      "repLow": 8,
-      "repHigh": 10,
-      "startWeightLb": 35,
-      "restSec": 90,
-      "lowerSec": 3,
-      "note": "One bell, held in both hands. Soft knees, hips back, neutral spine. Lower for 3 seconds."
+      "note": "Floor press is the substitute. Log the bell weight."
     },
     {
       "id": "one-arm-row",
@@ -165,7 +177,45 @@
       "startWeightLb": 30,
       "restSec": 90,
       "lowerSec": 3,
-      "note": "One bell. Left arm first. Neutral spine."
+      "note": "One bell. Left arm first. Neutral spine. Wednesday adds one set on the left only."
+    },
+    {
+      "id": "plank",
+      "name": "Plank",
+      "kind": "hold",
+      "unilateral": false,
+      "sets": 2,
+      "seconds": 30,
+      "stepSec": 5,
+      "capSec": 45,
+      "restSec": 90,
+      "afterCapNote": "45s is the top for the front plank. Add time on the side plank.",
+      "note": "Bodyweight. 2 × 30–45 s. Add 5 s when every set hits the target. Cap 45 s."
+    },
+    {
+      "id": "kb-rdl",
+      "name": "Romanian Deadlift (Kettlebell)",
+      "kind": "load",
+      "unilateral": false,
+      "sets": 4,
+      "repLow": 8,
+      "repHigh": 10,
+      "startWeightLb": 35,
+      "restSec": 90,
+      "lowerSec": 3,
+      "note": "One bell, held in both hands. Soft knees, hips back, neutral spine."
+    },
+    {
+      "id": "side-plank",
+      "name": "Side Plank",
+      "kind": "hold",
+      "unilateral": true,
+      "sets": 2,
+      "seconds": 20,
+      "stepSec": 5,
+      "capSec": 30,
+      "restSec": 90,
+      "note": "Bodyweight. 2 × 20–30 s per side. Left side first."
     },
     {
       "id": "split-squat",
@@ -178,7 +228,20 @@
       "startWeightLb": 25,
       "restSec": 90,
       "lowerSec": 3,
-      "note": "One bell. Left leg first. Lower for 3 seconds."
+      "note": "Goblet hold. Rear foot stays on the floor. Left leg first."
+    },
+    {
+      "id": "single-arm-bench-press",
+      "name": "Single-Arm Bench Press (Kettlebell)",
+      "kind": "load",
+      "unilateral": true,
+      "sets": 3,
+      "repLow": 8,
+      "repHigh": 10,
+      "startWeightLb": 25,
+      "restSec": 90,
+      "lowerSec": 3,
+      "note": "One bell. Left arm first. Floor press is the substitute."
     },
     {
       "id": "single-leg-rdl",
@@ -192,18 +255,6 @@
       "restSec": 90,
       "lowerSec": 3,
       "note": "One bell. Left leg first. Hips square, soft knee on the standing leg."
-    },
-    {
-      "id": "side-plank",
-      "name": "Side Plank",
-      "kind": "hold",
-      "unilateral": true,
-      "sets": 2,
-      "seconds": 20,
-      "stepSec": 5,
-      "capSec": 30,
-      "restSec": 90,
-      "note": "Bodyweight. Left side first."
     }
   ]
 }

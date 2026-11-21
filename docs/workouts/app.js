@@ -6,7 +6,7 @@
   var THEME_KEY = "health-log-theme";
   var WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  var RUNG_RANK = { base: 0, deload: 0, hold: 0, reps: 1, pause: 2, lower: 3, set: 4, rest: 5, top: 6 };
+  var RUNG_RANK = { base: 0, deload: 0, hold: 0, reps12: 1, reps: 2, reps15: 2, pause: 3, lower: 4, set: 5, rest: 6, top: 7 };
 
   var program = null;
   var state = loadState();
@@ -123,10 +123,11 @@
     var d = {
       stepLb: 5,
       capLb: 40,
-      repLadderHigh: 15,
       pauseSec: 2,
       slowLowerSec: 4,
       extraSets: 1,
+      bilateralSetCap: 5,
+      unilateralSetCap: 4,
       shortRestSec: 60
     };
     if (!raw || typeof raw !== "object") return d;
@@ -136,34 +137,30 @@
     return d;
   }
 
-  function basePlan(def, prog) {
+  function basePlan(def) {
     return {
       sets: def.sets,
       repLow: def.repLow == null ? null : def.repLow,
       repHigh: def.repHigh == null ? null : def.repHigh,
+      extraLeftSets: 0,
       pauseSec: 0,
       lowerSec: def.lowerSec || 3,
       restSec: def.restSec || 90,
       seconds: def.seconds == null ? null : def.seconds,
       weightLb: def.startWeightLb == null ? null : def.startWeightLb,
+      tempoPause: 1,
+      tempoLift: 1,
       rung: "base"
     };
   }
 
-  function planOf(def, prog, last) {
-    var plan = last && last.plan ? clone(last.plan) : basePlan(def, prog);
-    if (plan.sets == null) plan.sets = def.sets;
-    if (plan.restSec == null) plan.restSec = def.restSec || 90;
-    if (plan.lowerSec == null) plan.lowerSec = def.lowerSec || 3;
-    if (plan.pauseSec == null) plan.pauseSec = 0;
-    if (!plan.rung) plan.rung = "base";
-    if (def.kind === "hold") {
-      if (plan.seconds == null) plan.seconds = def.seconds;
-    } else {
-      if (plan.repLow == null) plan.repLow = def.repLow;
-      if (plan.repHigh == null) plan.repHigh = def.repHigh;
-      if (plan.weightLb == null && def.startWeightLb != null) plan.weightLb = def.startWeightLb;
-    }
+  function dayPlan(def, slot) {
+    var plan = basePlan(def);
+    var over = slot || {};
+    ["sets", "repLow", "repHigh", "seconds", "restSec"].forEach(function (key) {
+      if (over[key] != null && over[key] !== "") plan[key] = over[key];
+    });
+    plan.extraLeftSets = over.extraLeftSets || 0;
     return plan;
   }
 
@@ -172,10 +169,13 @@
     return last.sets.filter(function (s) { return s && s.done; });
   }
 
+  function workingSets(sets) {
+    return (sets || []).filter(function (s) { return s && s.done && !s.warmup; });
+  }
+
   function minDoneWeight(sets) {
     var vals = [];
-    (sets || []).forEach(function (s) {
-      if (!s || !s.done) return;
+    workingSets(sets).forEach(function (s) {
       var w = numOrNull(s.weightLb);
       if (w !== null) vals.push(w);
     });
@@ -184,7 +184,7 @@
   }
 
   function hitTarget(def, plan, sets) {
-    var done = (sets || []).filter(function (s) { return s && s.done; });
+    var done = workingSets(sets);
     if (done.length < (plan.sets || 1)) return false;
     if (def.kind === "hold") {
       return done.every(function (s) {
@@ -198,9 +198,79 @@
     });
   }
 
+  function setCap(def, rules) {
+    return def.unilateral ? rules.unilateralSetCap : rules.bilateralSetCap;
+  }
+
+  function addOneSet(plan, def, rules) {
+    var cap = setCap(def, rules);
+    var next = clone(plan);
+    var extra = next.extraLeftSets || 0;
+    if ((next.sets || 0) >= cap && extra === 0) return null;
+    if ((next.sets || 0) < cap) next.sets = (next.sets || 0) + 1;
+    if ((next.sets || 0) + (next.extraLeftSets || 0) > cap) {
+      next.extraLeftSets = Math.max(0, cap - (next.sets || 0));
+    }
+    if (next.sets === plan.sets && (next.extraLeftSets || 0) === (plan.extraLeftSets || 0)) return null;
+    return next;
+  }
+
+  function applyRung(today, rung, def, rules) {
+    var plan = clone(today);
+    var name = rung === "reps" ? "reps15" : (rung || "base");
+    var rank = RUNG_RANK[name] || 0;
+    plan.rung = name;
+    if (def.kind === "hold") return plan;
+    if (rank >= RUNG_RANK.reps12 && (plan.repHigh || 0) < 12) plan.repHigh = 12;
+    if (rank >= RUNG_RANK.reps15 && (plan.repHigh || 0) < 15) plan.repHigh = 15;
+    if (rank >= RUNG_RANK.pause) plan.pauseSec = rules.pauseSec;
+    if (rank >= RUNG_RANK.lower) plan.lowerSec = rules.slowLowerSec;
+    if (rank >= RUNG_RANK.set) {
+      var added = addOneSet(today, def, rules);
+      if (added) {
+        plan.sets = added.sets;
+        plan.extraLeftSets = added.extraLeftSets || 0;
+      }
+    }
+    if (rank >= RUNG_RANK.rest) plan.restSec = rules.shortRestSec;
+    return plan;
+  }
+
+  function planChanged(a, b) {
+    return a.repHigh !== b.repHigh || a.pauseSec !== b.pauseSec || a.lowerSec !== b.lowerSec ||
+      a.sets !== b.sets || (a.extraLeftSets || 0) !== (b.extraLeftSets || 0) || a.restSec !== b.restSec;
+  }
+
+  function advanceRung(today, currentRung, def, rules) {
+    var order = ["reps12", "reps15", "pause", "lower", "set", "rest", "top"];
+    var current = currentRung === "reps" ? "reps15" : (currentRung || "base");
+    var start = 0;
+    var idx = order.indexOf(current);
+    if (idx !== -1) start = idx + 1;
+    var baseline = applyRung(today, current === "base" || current === "deload" || current === "hold" ? "base" : current, def, rules);
+    for (var i = start; i < order.length; i++) {
+      var candidate = applyRung(today, order[i], def, rules);
+      if (order[i] === "top" || planChanged(baseline, candidate)) return candidate;
+    }
+    return applyRung(today, "top", def, rules);
+  }
+
+  function rungText(rung, weight) {
+    if (rung === "reps12") return weight + " lb is the top bell. Work up to 12 reps.";
+    if (rung === "reps15" || rung === "reps") return "Work up to 15 reps.";
+    if (rung === "pause") return "Add a 2-second pause.";
+    if (rung === "lower") return "Lower for 4 seconds.";
+    if (rung === "set") return "Add a set.";
+    if (rung === "rest") return "Shorten rest to 45–60 seconds.";
+    return "Top of the ladder. Repeat this session.";
+  }
+
   function describeLast(def, last) {
-    var done = doneSets(last);
-    if (!done.length) return "";
+    var done = workingSets(last && last.sets);
+    if (!done.length) {
+      var anyWarm = doneSets(last).some(function (s) { return s.warmup; });
+      return anyWarm ? "warm-up only" : "";
+    }
     if (def.kind === "hold") {
       return done.map(function (s) {
         var n = numOrNull(s.seconds);
@@ -215,83 +285,95 @@
     return (w === null ? "—" : w + " lb") + " × " + reps;
   }
 
-  function suggestNext(def, progression, last, deloadSpec) {
+  function suggestNext(def, todayPlan, progression, last, deloadSpec) {
     var rules = progressionOf(progression);
+    var today = todayPlan ? clone(todayPlan) : dayPlan(def, null);
+    var described = last ? describeLast(def, last) : "";
+    var worked = last ? workingSets(last.sets) : [];
+    var lastPlan = last && last.plan ? last.plan : null;
+
     if (deloadSpec) {
-      var prior = planOf(def, rules, last);
-      var easy = basePlan(def, rules);
-      var capSets = deloadSpec.sets || prior.sets || def.sets;
-      easy.sets = Math.max(1, Math.min(def.sets || capSets, capSets));
+      var easy = clone(today);
+      var capSets = deloadSpec.sets || 2;
+      easy.sets = Math.max(1, Math.min(today.sets || capSets, capSets));
+      easy.extraLeftSets = 0;
+      easy.pauseSec = 0;
+      easy.lowerSec = def.lowerSec || 3;
+      easy.restSec = def.restSec || 90;
       easy.rung = "deload";
       if (def.kind === "hold") {
-        easy.seconds = prior.seconds == null ? def.seconds : prior.seconds;
+        easy.seconds = lastPlan && lastPlan.seconds != null ? lastPlan.seconds : today.seconds;
         return {
           plan: easy,
-          text: "Deload week: " + easy.sets + " × " + easy.seconds + "s. No extra time.",
-          lastText: last ? describeLast(def, last) : ""
+          text: "Deload: " + easy.sets + " × " + easy.seconds + "s. No extra time.",
+          lastText: described
         };
       }
-      var used = last ? minDoneWeight(last.sets) : null;
-      easy.weightLb = used !== null ? used : prior.weightLb;
+      var kept = worked.length ? minDoneWeight(last.sets) : null;
+      easy.weightLb = kept !== null ? kept : today.weightLb;
+      var lighter = easy.weightLb == null ? null : easy.weightLb - rules.stepLb;
       return {
         plan: easy,
-        text: "Deload week: " + easy.weightLb + " lb, " + easy.sets + " sets. No new weight.",
-        lastText: last ? describeLast(def, last) : ""
+        text: "Deload: " + easy.weightLb + " lb, or " + lighter + " lb. " + easy.sets + " sets. No added pause.",
+        lastText: described
       };
     }
 
-    if (!last || !doneSets(last).length) {
-      var start = basePlan(def, rules);
+    if (!worked.length) {
       var startText = def.kind === "hold"
-        ? "Start at " + start.seconds + "s × " + start.sets + "."
-        : "Start at " + start.weightLb + " lb, " + start.sets + " × " + start.repLow + "–" + start.repHigh + ".";
-      return { plan: start, text: startText, lastText: "" };
+        ? "Start at " + today.seconds + "s × " + today.sets + "."
+        : "Start at " + today.weightLb + " lb, " + today.sets + " × " + today.repLow + "–" + today.repHigh + ".";
+      return { plan: today, text: startText, lastText: described };
     }
 
-    var plan = planOf(def, rules, last);
-    var described = describeLast(def, last);
-    var hit = hitTarget(def, plan, last.sets);
+    var hit = hitTarget(def, lastPlan || today, last.sets);
 
     if (def.kind === "hold") {
-      var target = plan.seconds != null ? plan.seconds : def.seconds;
-      plan.seconds = target;
-      plan.sets = plan.sets || def.sets;
+      var target = lastPlan && lastPlan.seconds != null ? lastPlan.seconds : today.seconds;
+      var stay = clone(today);
+      stay.seconds = target;
+      stay.sets = today.sets;
       if (!hit) {
-        return {
-          plan: plan,
-          text: "Stay at " + target + "s until every set hits it.",
-          lastText: described
-        };
+        return { plan: stay, text: "Stay at " + target + "s until every working set hits it.", lastText: described };
       }
       var stepSec = def.stepSec || 5;
       var capSec = def.capSec == null ? target : def.capSec;
       var nextSec = Math.min(capSec, target + stepSec);
       if (nextSec > target) {
-        plan.seconds = nextSec;
-        plan.rung = "hold";
-        return { plan: plan, text: "Next: " + nextSec + " seconds.", lastText: described };
+        stay.seconds = nextSec;
+        stay.rung = "hold";
+        return { plan: stay, text: "Next: " + nextSec + " seconds.", lastText: described };
       }
-      plan.rung = "top";
-      return { plan: plan, text: target + "s is the top. Repeat it.", lastText: described };
-    }
-
-    var w = minDoneWeight(last.sets);
-    if (w === null) w = plan.weightLb != null ? plan.weightLb : def.startWeightLb;
-    plan.weightLb = w;
-    if (!hit) {
+      stay.seconds = target;
+      stay.rung = "top";
       return {
-        plan: plan,
-        text: "Stay at " + w + " lb until every set hits " + plan.repHigh + ".",
+        plan: stay,
+        text: def.afterCapNote || (target + "s is the top. Repeat it."),
         lastText: described
       };
     }
 
-    var cap = rules.capLb;
-    var step = rules.stepLb;
-    var nextW = Math.min(cap, w + step);
+    var w = minDoneWeight(last.sets);
+    if (w === null) w = today.weightLb;
+    var rung = lastPlan && lastPlan.rung ? lastPlan.rung : "base";
+    if (!hit) {
+      var held = applyRung(today, rung, def, rules);
+      held.weightLb = w;
+      return {
+        plan: held,
+        text: "Stay at " + w + " lb until every working set hits " + held.repHigh + ".",
+        lastText: described
+      };
+    }
+
+    var nextW = Math.min(rules.capLb, w + rules.stepLb);
     if (nextW > w) {
-      var bumped = basePlan(def, rules);
+      var bumped = clone(today);
       bumped.weightLb = nextW;
+      bumped.rung = "base";
+      bumped.pauseSec = 0;
+      bumped.lowerSec = today.lowerSec || 3;
+      bumped.restSec = today.restSec || 90;
       return {
         plan: bumped,
         text: "Next: " + nextW + " lb, start at " + bumped.repLow + ".",
@@ -299,61 +381,9 @@
       };
     }
 
-    var high = rules.repLadderHigh;
-    var pause = rules.pauseSec;
-    var slow = rules.slowLowerSec;
-    var extra = (def.sets || plan.sets) + rules.extraSets;
-    var shortRest = rules.shortRestSec;
-    var next = clone(plan);
-    next.weightLb = w;
-
-    if ((plan.repHigh || 0) < high) {
-      next.repHigh = high;
-      next.rung = "reps";
-      return {
-        plan: next,
-        text: w + " lb is the top bell. Work up to " + high + " reps.",
-        lastText: described
-      };
-    }
-    if ((plan.pauseSec || 0) < pause) {
-      next.pauseSec = pause;
-      next.rung = "pause";
-      return {
-        plan: next,
-        text: "Add a " + pause + "-second pause at the bottom.",
-        lastText: described
-      };
-    }
-    if ((plan.lowerSec || 3) < slow) {
-      next.lowerSec = slow;
-      next.rung = "lower";
-      return {
-        plan: next,
-        text: "Lower for " + slow + " seconds.",
-        lastText: described
-      };
-    }
-    if ((plan.sets || def.sets) < extra) {
-      next.sets = extra;
-      next.rung = "set";
-      return {
-        plan: next,
-        text: "Add a set (" + extra + " sets).",
-        lastText: described
-      };
-    }
-    if ((plan.restSec || 90) > shortRest) {
-      next.restSec = shortRest;
-      next.rung = "rest";
-      return {
-        plan: next,
-        text: "Shorten rest to " + shortRest + " seconds.",
-        lastText: described
-      };
-    }
-    next.rung = "top";
-    return { plan: next, text: "Top of the ladder. Repeat this session.", lastText: described };
+    var advanced = advanceRung(today, rung, def, rules);
+    advanced.weightLb = w;
+    return { plan: advanced, text: rungText(advanced.rung, w), lastText: described };
   }
 
   function filterSide(sets, side) {
@@ -364,25 +394,39 @@
     if (!last) return null;
     var plan = last.plan ? clone(last.plan) : null;
     if (plan) {
+      var count = plan.sets || 0;
+      if (side === "L") count += plan.extraLeftSets || 0;
+      plan.sets = count;
+      plan.extraLeftSets = 0;
       var key = side === "L" ? "weightLeft" : "weightRight";
       if (plan[key] != null && plan[key] !== "") plan.weightLb = plan[key];
     }
     return { plan: plan, sets: filterSide(last.sets, side) };
   }
 
-  function suggestExercise(def, progression, last, deloadSpec) {
-    if (!def.unilateral) return suggestNext(def, progression, last, deloadSpec);
-    var left = suggestNext(def, progression, sideLast(last, "L"), deloadSpec);
-    var right = suggestNext(def, progression, sideLast(last, "R"), deloadSpec);
+  function suggestExercise(def, todayPlan, progression, last, deloadSpec) {
+    var today = todayPlan ? clone(todayPlan) : dayPlan(def, null);
+    if (!def.unilateral) return suggestNext(def, today, progression, last, deloadSpec);
+    var leftToday = clone(today);
+    leftToday.sets = (today.sets || 0) + (today.extraLeftSets || 0);
+    leftToday.extraLeftSets = 0;
+    var rightToday = clone(today);
+    rightToday.extraLeftSets = 0;
+    var left = suggestNext(def, leftToday, progression, sideLast(last, "L"), deloadSpec);
+    var right = suggestNext(def, rightToday, progression, sideLast(last, "R"), deloadSpec);
     var leftRank = RUNG_RANK[left.plan.rung] || 0;
     var rightRank = RUNG_RANK[right.plan.rung] || 0;
-    var shared = leftRank <= rightRank ? clone(left.plan) : clone(right.plan);
-    if (left.plan.repHigh != null && right.plan.repHigh != null) {
-      shared.repHigh = Math.min(left.plan.repHigh, right.plan.repHigh);
+    var slower = leftRank <= rightRank ? left.plan : right.plan;
+    var shared = deloadSpec ? clone(slower) : applyRung(today, slower.rung, def, progressionOf(progression));
+    if (deloadSpec) {
+      shared.sets = Math.min(left.plan.sets || 1, right.plan.sets || 1);
+      shared.extraLeftSets = 0;
     }
     shared.weightLeft = left.plan.weightLb;
     shared.weightRight = right.plan.weightLb;
     shared.weightLb = null;
+    shared.rung = slower.rung;
+    if (def.kind === "hold") shared.seconds = slower.seconds;
     var text = left.text;
     if (left.text !== right.text || left.plan.weightLb !== right.plan.weightLb) {
       text = "Left: " + left.text + "\nRight: " + right.text;
@@ -450,6 +494,7 @@
   function makeSets(def, plan) {
     var out = [];
     var n = plan.sets || def.sets || 1;
+    var extra = plan.extraLeftSets || 0;
     function row(i, side, weight) {
       return {
         n: i,
@@ -457,6 +502,7 @@
         weightLb: weight == null || weight === "" ? "" : String(weight),
         reps: "",
         seconds: "",
+        warmup: false,
         done: false,
         doneAt: ""
       };
@@ -473,7 +519,16 @@
         out.push(row(i, "", plan.weightLb));
       }
     }
+    if (def.unilateral && def.kind !== "hold") {
+      var leftOnly = plan.weightLeft != null ? plan.weightLeft : plan.weightLb;
+      for (var j = 1; j <= extra; j++) out.push(row(n + j, "L", leftOnly));
+    }
     return out;
+  }
+
+  function slotsFor(day) {
+    if (day && Array.isArray(day.slots) && day.slots.length) return day.slots;
+    return ((day && day.exerciseIds) || []).map(function (id) { return { id: id }; });
   }
 
   function buildSession(date, dayId) {
@@ -481,14 +536,15 @@
     var deloadNow = isDeload(program, date);
     var spec = deloadNow ? program.deload : null;
     var exercises = [];
-    ((day && day.exerciseIds) || []).forEach(function (id) {
+    slotsFor(day).forEach(function (slot) {
+      var id = slot && (slot.id || slot);
       var def = defById(program, id);
       if (!def) return;
       var progressLog = latestExerciseLog(id, date, true);
       var shownLog = latestExerciseLog(id, date, false);
-      var suggestion = suggestExercise(def, program.progression, progressLog && progressLog.exercise, spec);
+      var suggestion = suggestExercise(def, dayPlan(def, slot), program.progression, progressLog && progressLog.exercise, spec);
       var lastText = "No sessions yet.";
-      if (shownLog) {
+      if (shownLog && describeExercise(def, shownLog.exercise)) {
         lastText = "Last time: " + describeExercise(def, shownLog.exercise);
         if (shownLog.deload) lastText += " (deload)";
       }
@@ -559,17 +615,26 @@
     return autoDay(program, iso);
   }
 
+  function tempoLabel(plan) {
+    var lower = plan.lowerSec || 3;
+    var pause = plan.pauseSec ? plan.pauseSec : (plan.tempoPause || 1);
+    var lift = plan.tempoLift || 1;
+    return lower + "-" + pause + "-" + lift;
+  }
+
   function prescriptionLine(ex) {
     var plan = ex.plan || {};
     if (ex.kind === "hold") {
-      return (plan.sets || 1) + " × " + (plan.seconds || "") + "s" + (ex.unilateral ? " per side" : "");
+      var hold = (plan.sets || 1) + " × " + (plan.seconds || "") + "s" + (ex.unilateral ? " per side" : "");
+      if (ex.unilateral) hold += " · rest " + (plan.restSec || 90) + "s after both sides";
+      return hold;
     }
-    var bits = [
-      (plan.sets || 1) + " × " + plan.repLow + "–" + plan.repHigh + (ex.unilateral ? " per side" : "")
-    ];
-    if (plan.pauseSec) bits.push(plan.pauseSec + "s pause");
-    if (plan.lowerSec) bits.push(plan.lowerSec + "s lower");
-    if (plan.restSec) bits.push("rest " + plan.restSec + "s");
+    var sets = (plan.sets || 1) + " × " + plan.repLow + "–" + plan.repHigh;
+    if (ex.unilateral) sets += " per side";
+    if (plan.extraLeftSets) sets += " + " + plan.extraLeftSets + " left";
+    var bits = [sets, "tempo " + tempoLabel(plan)];
+    if (ex.unilateral) bits.push("rest " + (plan.restSec || 90) + "s after both sides");
+    else if (plan.restSec) bits.push("rest " + plan.restSec + "s");
     return bits.join(" · ");
   }
 
@@ -582,6 +647,7 @@
     var w = weekFor(program, iso);
     if (w) {
       var label = "Week " + w.n + " · " + fmtDate(w.start) + " – " + fmtDate(w.end);
+      if (w.rir) label += " · RIR " + w.rir;
       if (w.note) label += ". " + w.note;
       return label;
     }
@@ -620,6 +686,8 @@
     html += "</div>";
     if (!dayId) {
       html += '<p class="hint">Rest day. Pick A, B, or C if you are training today.</p>';
+    } else if (day && day.note) {
+      html += '<p class="hint">' + esc(day.note) + "</p>";
     }
     html += "</section>";
 
@@ -658,13 +726,17 @@
     var disabled = locked ? " disabled" : "";
     var seen = {};
     ex.sets.forEach(function (set, setIndex) {
+      var hasRight = ex.sets.some(function (other) { return other.n === set.n && other.side === "R"; });
+      var leftOnly = set.side === "L" && !hasRight;
       if (!seen[set.n]) {
         seen[set.n] = true;
         html += '<div class="set-block">';
-        if (ex.unilateral) html += '<div class="set-block-label">Set ' + esc(set.n) + "</div>";
+        if (ex.unilateral) {
+          html += '<div class="set-block-label">Set ' + esc(set.n) + (leftOnly ? " · left only" : "") + "</div>";
+        }
       }
       var side = set.side === "L" ? "Left" : set.side === "R" ? "Right" : String(set.n);
-      html += '<div class="set-row' + (hold ? " hold" : "") + '">';
+      html += '<div class="set-row' + (hold ? " hold" : "") + (set.warmup ? " is-warmup" : "") + '">';
       html += '<span class="set-side">' + esc(side) + "</span>";
       if (hold) {
         html += '<input type="number" inputmode="numeric" min="0" max="300" step="1" placeholder="' + esc(ex.plan.seconds || "") + ' sec" aria-label="' + esc(side + " seconds") + '" data-field="seconds" data-ex="' + exIndex + '" data-set="' + setIndex + '" value="' + esc(set.seconds) + '"' + disabled + " />";
@@ -681,6 +753,7 @@
         });
         html += "</div>";
       }
+      html += '<button type="button" class="warmup-btn" data-action="warmup" data-ex="' + exIndex + '" data-set="' + setIndex + '" aria-pressed="' + (set.warmup ? "true" : "false") + '"' + disabled + ">Warm-up</button>";
       html += "</div>";
       var next = ex.sets[setIndex + 1];
       if (!next || next.n !== set.n) html += "</div>";
@@ -728,10 +801,16 @@
 
   function setLine(ex, set) {
     var side = set.side === "L" ? "Left " : set.side === "R" ? "Right " : "";
-    if (ex.kind === "hold") return ex.name + " · " + side + "set " + set.n + ": " + (set.seconds === "" || set.seconds == null ? "—" : set.seconds + "s");
+    if (ex.kind === "hold") {
+      var holdLine = ex.name + " · " + side + "set " + set.n + ": " + (set.seconds === "" || set.seconds == null ? "—" : set.seconds + "s");
+      if (set.warmup) holdLine += " · warm-up";
+      return holdLine;
+    }
     var w = set.weightLb === "" || set.weightLb == null ? "—" : set.weightLb + " lb";
     var r = set.reps === "" || set.reps == null ? "—" : set.reps;
-    return ex.name + " · " + side + "set " + set.n + ": " + w + " × " + r;
+    var line = ex.name + " · " + side + "set " + set.n + ": " + w + " × " + r;
+    if (set.warmup) line += " · warm-up";
+    return line;
   }
 
   function syncBadge(s) {
@@ -838,6 +917,14 @@
       renderToday();
       return;
     }
+    if (action === "warmup") {
+      var warmSet = setFrom(el);
+      if (!warmSet) return;
+      warmSet.warmup = !warmSet.warmup;
+      persistSession(active);
+      renderToday();
+      return;
+    }
     if (action === "done") {
       var doneSet = setFrom(el);
       if (!doneSet) return;
@@ -845,11 +932,23 @@
       doneSet.done = !doneSet.done;
       doneSet.doneAt = doneSet.done ? new Date().toISOString() : "";
       persistSession(active);
-      if (doneSet.done) startRest((ex.plan && ex.plan.restSec) || 90, ex.name);
+      if (doneSet.done && !doneSet.warmup && shouldRest(ex, doneSet)) {
+        startRest((ex.plan && ex.plan.restSec) || 90, ex.name);
+      }
       renderToday();
       return;
     }
     if (action === "finish") finishActive();
+  }
+
+  function shouldRest(ex, set) {
+    if (!ex || !ex.unilateral) return true;
+    if (set.side === "R") return true;
+    if (set.side !== "L") return true;
+    var hasRight = (ex.sets || []).some(function (other) {
+      return other.n === set.n && other.side === "R";
+    });
+    return !hasRight;
   }
 
   function setFrom(el) {
@@ -992,7 +1091,7 @@
     var sets = [];
     (session.exercises || []).forEach(function (ex) {
       (ex.sets || []).forEach(function (set) {
-        if (!set.done) return;
+        if (!set.done || set.warmup) return;
         sets.push({
           exercise: ex.name,
           side: set.side || "",
@@ -1298,6 +1397,7 @@
     weekdayOf: weekdayOf,
     suggestNext: suggestNext,
     suggestExercise: suggestExercise,
+    dayPlan: dayPlan,
     isDeload: isDeload,
     autoDay: autoDay,
     buildPayload: buildPayload,
