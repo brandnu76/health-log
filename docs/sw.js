@@ -1,4 +1,4 @@
-const CACHE = "health-log-v19";
+const CACHE = "health-log-v20";
 const PRECACHE = [
   "./",
   "./index.html",
@@ -51,6 +51,8 @@ self.addEventListener("fetch", function (event) {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  // The workout tracker is a separate app with its own service worker.
+  if (/\/workouts(\/|$)/.test(url.pathname)) return;
 
   const isData = url.pathname.endsWith("/data.json") || url.pathname.endsWith("/foods.json");
   if (isData) {

@@ -1,0 +1,22 @@
+{
+  "id": "/health-log/workouts/",
+  "name": "Workout tracker",
+  "short_name": "Workouts",
+  "description": "Home kettlebell workouts for Brandon's health log. Personal use only.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#042f2e",
+  "theme_color": "#042f2e",
+  "lang": "en",
+  "categories": ["health", "fitness"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

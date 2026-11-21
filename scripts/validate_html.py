@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lightweight HTML sanity check for docs/*.html.
+"""Lightweight HTML sanity check for HTML files under docs/.
 
 Uses the stdlib parser. Void and self-closing tags are ignored. The check
 fails on parser exceptions, a missing html/body, or an html/body end tag
@@ -60,7 +60,7 @@ def check_file(path: Path) -> list[str]:
 
 
 def main() -> None:
-    pages = sorted(DOCS.glob("*.html"))
+    pages = sorted(DOCS.rglob("*.html"))
     if not pages:
         print("no docs/*.html files found", file=sys.stderr)
         sys.exit(1)

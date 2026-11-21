@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Home kettlebell workout tracker. Personal use only." />
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#042f2e" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Workouts" />
+  <title>Workouts · Brandon's Health Log</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to workout</a>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <div class="brand">
+        <h1>Workouts</h1>
+        <span class="subtitle" id="blockLabel">Kettlebells · home</span>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="chip" id="installBtn" hidden>Install</button>
+        <a class="chip" href="../">Health log</a>
+        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch theme">
+          <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 0 0 11.5 11.5z"/></svg>
+          <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="wrap">
+    <p class="warn" id="saveWarn" hidden>Could not save on this phone. Free a little space and try again.</p>
+    <p class="warn" id="loadError" hidden>Could not load the program. Check the connection and reload.</p>
+    <section id="viewToday" aria-label="Today"></section>
+    <section id="viewHistory" aria-label="History" hidden></section>
+    <section id="viewSettings" aria-label="Settings" hidden></section>
+    <footer class="site-footer">
+      <p>Personal tracking only — not medical advice.</p>
+      <p>© 2026 Brandon Carroll. All rights reserved.</p>
+    </footer>
+  </main>
+  <div id="restBar" class="rest-bar" hidden>
+    <div class="rest-inner">
+      <div>
+        <div id="restLabel" class="rest-kicker">Rest</div>
+        <div id="restClock" class="rest-clock" role="timer" aria-live="polite">1:30</div>
+      </div>
+      <div class="rest-actions">
+        <button type="button" id="restMinus" aria-label="Subtract 15 seconds">−15</button>
+        <button type="button" id="restPlus" aria-label="Add 15 seconds">+15</button>
+        <button type="button" id="restSkip">Skip</button>
+      </div>
+    </div>
+  </div>
+  <nav class="tabbar" aria-label="Sections">
+    <button type="button" id="tabToday" aria-current="page">Today</button>
+    <button type="button" id="tabHistory">History</button>
+    <button type="button" id="tabSettings">Settings</button>
+  </nav>
+  <script src="app.js"></script>
+</body>
+</html>
