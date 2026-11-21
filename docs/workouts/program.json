@@ -1,0 +1,209 @@
+{
+  "id": "block-2-lean-build",
+  "name": "Block 2 — Lean Build",
+  "start": "2026-11-23",
+  "end": "2027-01-01",
+  "timezone": "America/New_York",
+  "editing": "This file is the program. For the next block, replace days, exercises, weeks, and deload. Keep an exercise id the same when the movement continues so suggestions still use its history. No Block 2 training file was in the repo; the sets, reps, and starting weights below are the Block 2 defaults.",
+  "equipment": {
+    "kettlebellsLb": [25, 30, 35, 40],
+    "stepLb": 5,
+    "bench": true,
+    "note": "Adjustable kettlebells, 25–40 lb in 5 lb steps, and a bench."
+  },
+  "schedule": {
+    "Mon": "A",
+    "Wed": "B",
+    "Fri": "C"
+  },
+  "cues": [
+    "Left side first.",
+    "Lower for 3 seconds.",
+    "Rest 90 seconds. Skip the timer between sides if you want a shorter session.",
+    "Stop the set when form slips.",
+    "Stop the session if you feel dizzy, faint, short of breath, or chest pain."
+  ],
+  "progression": {
+    "stepLb": 5,
+    "capLb": 40,
+    "repLadderHigh": 15,
+    "pauseSec": 2,
+    "slowLowerSec": 4,
+    "extraSets": 1,
+    "shortRestSec": 60,
+    "ladder": [
+      "When every set hits the top of the rep range, add 5 lb, up to 40.",
+      "At 40 lb: more reps (up to 15), then a 2-second pause, then a 4-second lowering, then one extra set, then 60-second rest."
+    ]
+  },
+  "deload": {
+    "label": "Week 6 deload",
+    "start": "2026-12-28",
+    "end": "2027-01-01",
+    "sets": 2,
+    "note": "Same weights. Two sets on the 3-set lifts. Stop at the bottom of the rep range. Do not add weight this week."
+  },
+  "weeks": [
+    {
+      "n": 1,
+      "start": "2026-11-23",
+      "end": "2026-11-29",
+      "note": "Learn the split. Stay at the starting weights unless every set is already easy."
+    },
+    {
+      "n": 2,
+      "start": "2026-11-30",
+      "end": "2026-12-06",
+      "note": "Add weight only when every set hits the top of the rep range."
+    },
+    {
+      "n": 3,
+      "start": "2026-12-07",
+      "end": "2026-12-13",
+      "note": "Same plan."
+    },
+    {
+      "n": 4,
+      "start": "2026-12-14",
+      "end": "2026-12-20",
+      "note": "Same plan."
+    },
+    {
+      "n": 5,
+      "start": "2026-12-21",
+      "end": "2026-12-27",
+      "note": "Last build week before the deload."
+    },
+    {
+      "n": 6,
+      "start": "2026-12-28",
+      "end": "2027-01-01",
+      "deload": true,
+      "note": "Deload. Two sets on the 3-set lifts, same weights, no new progression."
+    }
+  ],
+  "days": [
+    {
+      "id": "A",
+      "name": "Squat",
+      "weekday": "Monday",
+      "exerciseIds": ["goblet-squat", "kb-floor-bench-press", "plank"]
+    },
+    {
+      "id": "B",
+      "name": "Hinge",
+      "weekday": "Wednesday",
+      "exerciseIds": ["kb-rdl", "one-arm-row"]
+    },
+    {
+      "id": "C",
+      "name": "Unilateral",
+      "weekday": "Friday",
+      "exerciseIds": ["split-squat", "single-leg-rdl", "side-plank"]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "goblet-squat",
+      "name": "Goblet Squat (Kettlebell)",
+      "kind": "load",
+      "unilateral": false,
+      "sets": 3,
+      "repLow": 8,
+      "repHigh": 10,
+      "startWeightLb": 30,
+      "restSec": 90,
+      "lowerSec": 3,
+      "note": "One bell at the chest. Elbows inside the knees. Lower for 3 seconds."
+    },
+    {
+      "id": "kb-floor-bench-press",
+      "name": "Floor / Bench Press (Kettlebell)",
+      "kind": "load",
+      "unilateral": false,
+      "sets": 3,
+      "repLow": 8,
+      "repHigh": 10,
+      "startWeightLb": 25,
+      "restSec": 90,
+      "lowerSec": 3,
+      "note": "25 lb per bell. Two bells, or a floor press if the bench is awkward. Log the bell weight."
+    },
+    {
+      "id": "plank",
+      "name": "Plank",
+      "kind": "hold",
+      "unilateral": false,
+      "sets": 2,
+      "seconds": 30,
+      "stepSec": 5,
+      "capSec": 45,
+      "restSec": 90,
+      "note": "Bodyweight. Straight line from head to heels."
+    },
+    {
+      "id": "kb-rdl",
+      "name": "Romanian Deadlift (Kettlebell)",
+      "kind": "load",
+      "unilateral": false,
+      "sets": 3,
+      "repLow": 8,
+      "repHigh": 10,
+      "startWeightLb": 35,
+      "restSec": 90,
+      "lowerSec": 3,
+      "note": "One bell, held in both hands. Soft knees, hips back, neutral spine. Lower for 3 seconds."
+    },
+    {
+      "id": "one-arm-row",
+      "name": "One-Arm Row (Kettlebell)",
+      "kind": "load",
+      "unilateral": true,
+      "sets": 3,
+      "repLow": 8,
+      "repHigh": 10,
+      "startWeightLb": 30,
+      "restSec": 90,
+      "lowerSec": 3,
+      "note": "One bell. Left arm first. Neutral spine."
+    },
+    {
+      "id": "split-squat",
+      "name": "Split Squat (Kettlebell)",
+      "kind": "load",
+      "unilateral": true,
+      "sets": 3,
+      "repLow": 8,
+      "repHigh": 10,
+      "startWeightLb": 25,
+      "restSec": 90,
+      "lowerSec": 3,
+      "note": "One bell. Left leg first. Lower for 3 seconds."
+    },
+    {
+      "id": "single-leg-rdl",
+      "name": "Single-Leg Romanian Deadlift (Kettlebell)",
+      "kind": "load",
+      "unilateral": true,
+      "sets": 3,
+      "repLow": 8,
+      "repHigh": 10,
+      "startWeightLb": 25,
+      "restSec": 90,
+      "lowerSec": 3,
+      "note": "One bell. Left leg first. Hips square, soft knee on the standing leg."
+    },
+    {
+      "id": "side-plank",
+      "name": "Side Plank",
+      "kind": "hold",
+      "unilateral": true,
+      "sets": 2,
+      "seconds": 20,
+      "stepSec": 5,
+      "capSec": 30,
+      "restSec": 90,
+      "note": "Bodyweight. Left side first."
+    }
+  ]
+}

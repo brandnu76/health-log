@@ -32,7 +32,7 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          files=(docs/*.js)
+          files=(docs/*.js docs/workouts/*.js)
           if [ ${#files[@]} -eq 0 ]; then
             echo "No docs/*.js files found" >&2
             exit 1

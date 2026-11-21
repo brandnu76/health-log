@@ -21,6 +21,7 @@
   ],
   "shortcuts": [
     { "name": "Daily log", "short_name": "Log", "url": "./log.html" },
+    { "name": "Workouts", "short_name": "Workouts", "url": "./workouts/" },
     { "name": "Scans", "short_name": "Scans", "url": "./" }
   ]
 }
