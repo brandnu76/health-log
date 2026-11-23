@@ -34,6 +34,7 @@
   let appData = null;
   let chartRange = "all";
   let deviceViewId = null;
+  let themeBeforePrint = null;
 
   function deviceCatalog(data) {
     const raw =
@@ -1674,7 +1675,126 @@
     });
   }
 
+  /** Signed change, latest minus the other scan. Null inputs stay a dash. */
+  function reportDelta(latest, other, current, prior, digits) {
+    if (!latest || !other || other.id === latest.id) return "—";
+    const info = deltaInfo(current, prior, {
+      lowerBetter: true,
+      digits: digits,
+    });
+    return info && info.text ? info.text : "—";
+  }
+
+  /**
+   * Print-only sheet for the scale selected in the device toggle.
+   * Values come from the scan record or from leanLb / whtrOf. Missing stays a dash.
+   */
+  function renderPrintReport(data) {
+    const root = document.getElementById("printReport");
+    if (!root || !data) return;
+    const device = viewDevice(data);
+    const scans = scansOnDevice(data.scans || [], device.id);
+    const latest = latestFullScan(scans);
+    const previous = priorScan(scans, latest);
+    const earliest = earliestScan(scans);
+    const height = subjectHeightIn(data);
+    const clock = parseClock(latest && latest.scanTime);
+    const deviceName = (device && device.label) || "—";
+    const meta = latest
+      ? fmt.date(latest.date) +
+        " · " +
+        (clock ? clock.text : "—") +
+        " · " +
+        deviceName
+      : "No official scan on this scale · " + deviceName;
+
+    function columnHead(prefix, scan) {
+      if (!scan || (latest && scan.id === latest.id)) return prefix;
+      return prefix + " · " + fmt.date(scan.date);
+    }
+
+    const metrics = [
+      {
+        label: "Weight (lb)",
+        digits: 1,
+        read: (scan) => numericField(scan, "weight"),
+        show: (value) => fmt.num(value, 1),
+      },
+      {
+        label: "Body fat (%)",
+        digits: 1,
+        read: (scan) => numericField(scan, "bf"),
+        show: (value) => fmt.num(value, 1),
+      },
+      {
+        label: "Fat mass (lb)",
+        digits: 1,
+        read: (scan) => numericField(scan, "fatMass"),
+        show: (value) => fmt.num(value, 1),
+      },
+      {
+        label: "Lean mass (lb)",
+        digits: 1,
+        read: (scan) => leanLb(scan),
+        show: (value) => fmt.num(value, 1),
+      },
+      {
+        label: "Visceral",
+        digits: 1,
+        read: (scan) => numericField(scan, "visceral"),
+        show: (value) => fmt.num(value, 1),
+      },
+      {
+        label: "Waist (in)",
+        digits: 3,
+        read: (scan) => numericField(scan, "waistIn"),
+        show: (value) => fmt.flex(value, 3),
+      },
+      {
+        label: "Waist-to-height",
+        digits: 3,
+        read: (scan) => whtrOf(scan, height),
+        show: (value) => fmt.num(value, 3),
+      },
+    ];
+
+    const rows = metrics
+      .map((metric) => {
+        const current = latest ? metric.read(latest) : null;
+        const prior = previous ? metric.read(previous) : null;
+        const early = earliest ? metric.read(earliest) : null;
+        return (
+          "<tr><th scope=\"row\">" +
+          escapeHtml(metric.label) +
+          "</th><td>" +
+          escapeHtml(current == null ? "—" : metric.show(current)) +
+          "</td><td>" +
+          escapeHtml(reportDelta(latest, previous, current, prior, metric.digits)) +
+          "</td><td>" +
+          escapeHtml(reportDelta(latest, earliest, current, early, metric.digits)) +
+          "</td></tr>"
+        );
+      })
+      .join("");
+
+    root.innerHTML =
+      "<h2>Scan report</h2>" +
+      '<p class="print-report-meta">' +
+      escapeHtml(meta) +
+      "</p>" +
+      '<table class="print-report-table"><thead><tr>' +
+      '<th scope="col">Metric</th><th scope="col">Latest</th><th scope="col">' +
+      escapeHtml(columnHead("Vs previous", previous)) +
+      '</th><th scope="col">' +
+      escapeHtml(columnHead("Vs earliest", earliest)) +
+      "</th></tr></thead><tbody>" +
+      rows +
+      "</tbody></table>" +
+      '<p class="print-report-foot">Same scale only. Change is the latest scan minus that scan. A dash means the value was not on the scan.</p>';
+  }
+
   function renderMetrics(data) {
+    renderPrintReport(data);
     const device = viewDevice(data);
     const scans = scansOnDevice(data.scans || [], device.id);
     const baseline = deviceBaseline(scans, device);
@@ -2490,12 +2610,16 @@
       ? "rgba(13, 148, 136, 0.14)"
       : "rgba(94, 234, 212, 0.16)";
     const pointBorder = cssVar("--bg") || "#0f1419";
+    const updateMode =
+      preferReducedMotion() || window.matchMedia("print").matches
+        ? "none"
+        : undefined;
     charts.forEach((chart) => {
       if (!chart) return;
       if (chart.config.type === "doughnut") {
         const ds = chart.data.datasets[0];
         if (ds) ds.borderColor = pointBorder;
-        chart.update(preferReducedMotion() ? "none" : undefined);
+        chart.update(updateMode);
         return;
       }
       if (!chart.data.datasets.length || !chart.options.scales) return;
@@ -2541,7 +2665,7 @@
           b.color = bandColor;
         });
       }
-      chart.update(preferReducedMotion() ? "none" : undefined);
+      chart.update(updateMode);
     });
   }
 
@@ -4491,6 +4615,39 @@
     });
   }
 
+  function chartsForPrint(on) {
+    if (on) {
+      if (themeBeforePrint == null) {
+        themeBeforePrint =
+          document.documentElement.getAttribute("data-theme") || "dark";
+      }
+      document.documentElement.setAttribute("data-theme", "light");
+    } else if (themeBeforePrint != null) {
+      document.documentElement.setAttribute("data-theme", themeBeforePrint);
+      themeBeforePrint = null;
+    } else {
+      return;
+    }
+    refreshChartColors();
+  }
+
+  function wirePrint() {
+    const btn = document.getElementById("printReportBtn");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        window.print();
+      });
+    }
+    window.addEventListener("beforeprint", () => chartsForPrint(true));
+    window.addEventListener("afterprint", () => chartsForPrint(false));
+    if (window.matchMedia) {
+      const mq = window.matchMedia("print");
+      const onChange = (event) => chartsForPrint(!!event.matches);
+      if (mq.addEventListener) mq.addEventListener("change", onChange);
+      else if (mq.addListener) mq.addListener(onChange);
+    }
+  }
+
   function syncRangeButtons() {
     document.querySelectorAll(".range-btn").forEach((btn) => {
       const on = btn.getAttribute("data-range") === chartRange;
@@ -4584,6 +4741,7 @@
   async function init() {
     wireTheme();
     wireExport();
+    wirePrint();
     wireRange();
     let data;
     try {
