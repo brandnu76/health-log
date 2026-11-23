@@ -82,6 +82,11 @@
 }
 @media (max-width: 639px) {
   .header-actions .chip.disclaimer { display: none; }
+  .header-actions .btn-export {
+    min-height: 2.75rem;
+    height: auto;
+    padding-inline: 0.95rem;
+  }
 }
 
 .delta-cell { font-variant-numeric: tabular-nums; font-weight: 600; }
@@ -718,6 +723,7 @@
   #installBtn,
   #exportCsv,
   #printReportBtn,
+  #workoutsLink,
   #themeToggle,
   .header-actions a.chip,
   .device-toggle,
